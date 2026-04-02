@@ -592,24 +592,28 @@ class Game {
         } else if (tile === "sand") {
           this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(184,134,11)", "rgb(139,69,19)");
         } else if (tile === "tree") {
-          this.drawRect(px, py, TILE_SIZE, TILE_SIZE, COLORS.DARK_GREEN, COLORS.BLACK);
-          this.ctx.beginPath();
-          this.ctx.fillStyle = COLORS.TREE_SHADOW;
-          this.ctx.arc(px + 23, py + 18, 13, 0, Math.PI * 2);
-          this.ctx.fill();
+          if (this.currentBiome === "GRASSLAND") {
+            this.drawRect(px, py, TILE_SIZE, TILE_SIZE, COLORS.DARK_GREEN, COLORS.BLACK);
+            this.ctx.beginPath();
+            this.ctx.fillStyle = COLORS.TREE_SHADOW;
+            this.ctx.arc(px + 23, py + 18, 13, 0, Math.PI * 2);
+            this.ctx.fill();
 
-          this.ctx.beginPath();
-          this.ctx.fillStyle = COLORS.TREE_GREEN;
-          this.ctx.arc(px + 20, py + 16, 12, 0, Math.PI * 2);
-          this.ctx.fill();
+            this.ctx.beginPath();
+            this.ctx.fillStyle = COLORS.TREE_GREEN;
+            this.ctx.arc(px + 20, py + 16, 12, 0, Math.PI * 2);
+            this.ctx.fill();
 
-          this.ctx.beginPath();
-          this.ctx.fillStyle = COLORS.TREE_HIGHLIGHT;
-          this.ctx.arc(px + 16, py + 12, 5, 0, Math.PI * 2);
-          this.ctx.fill();
+            this.ctx.beginPath();
+            this.ctx.fillStyle = COLORS.TREE_HIGHLIGHT;
+            this.ctx.arc(px + 16, py + 12, 5, 0, Math.PI * 2);
+            this.ctx.fill();
 
-          this.drawRect(px + 16, py + 26, 8, 12, COLORS.TREE_BROWN_DARK);
-          this.drawRect(px + 17, py + 27, 6, 10, COLORS.TREE_BROWN);
+            this.drawRect(px + 16, py + 26, 8, 12, COLORS.TREE_BROWN_DARK);
+            this.drawRect(px + 17, py + 27, 6, 10, COLORS.TREE_BROWN);
+          } else if (this.currentBiome === "DESERT") {
+            this.drawCactus(px, py);
+          }
         } else if (tile === "rock") {
           this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(184,134,11)", "rgb(139,69,19)");
           this.drawRect(px + 4, py + 4, 14, 14, "rgb(160,120,100)", "rgb(100,70,50)", 2);
@@ -641,6 +645,20 @@ class Game {
       this.ctx.fillStyle = COLORS.RED;
       this.ctx.arc(playerX + TILE_SIZE / 2, playerY + TILE_SIZE / 2, TILE_SIZE / 3, 0, Math.PI * 2);
       this.ctx.fill();
+    }
+  }
+
+  drawCactus(px, py) {
+    this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(184,134,11)", "rgb(139,69,19)");
+    this.drawRect(px + 14, py + 6, 12, 28, "rgb(76,153,76)", "rgb(50,100,50)", 1);
+    this.drawRect(px + 4, py + 12, 10, 8, "rgb(76,153,76)", "rgb(50,100,50)", 1);
+    this.drawRect(px + 26, py + 12, 10, 8, "rgb(76,153,76)", "rgb(50,100,50)", 1);
+
+    this.ctx.fillStyle = "rgb(200,50,50)";
+    for (let i = 0; i < 6; i += 1) {
+      this.ctx.fillRect(px + 18 + (i % 2) * 2, py + 10 + i * 4, 2, 2);
+      this.ctx.fillRect(px + 8 + (i % 2) * 2, py + 12 + i * 3, 2, 2);
+      this.ctx.fillRect(px + 28 + (i % 2) * 2, py + 12 + i * 3, 2, 2);
     }
   }
 
