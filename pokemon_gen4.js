@@ -318,7 +318,7 @@ class Game {
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
-    this.spriteDirs = ["pygame/Pokemon gen 4 sprites", "Pokemon gen 4 sprites"];
+    this.spriteDirs = [""];
     this.spriteCache = {};
 
     this.state = "START";
@@ -363,7 +363,7 @@ class Game {
 
   async loadSprite(fileName) {
     for (const dir of this.spriteDirs) {
-      const path = `${dir}/${fileName}`;
+      const path = dir ? `${dir}/${fileName}` : fileName;
       const img = new Image();
 
       const loaded = await new Promise((resolve) => {
