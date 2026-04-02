@@ -158,6 +158,16 @@ const GEN4_POKEMON = {
   Toxicroak: { type: "Poison/Fighting", hp: 83, attack: 106, defense: 65, speed: 85 }
 };
 
+const BIOME_POKEMON = {
+  GRASSLAND: ["Turtwig", "Chimchar", "Piplup", "Starly", "Bidoof", "Shinx", "Budew", "Buizel", "Riolu", "Croagunk"],
+  DESERT: ["Cranidos", "Rampardos", "Shieldon", "Bastiodon", "Gible", "Gabite", "Garchomp", "Chimchar", "Monferno"]
+};
+
+const BIOME_COLORS = {
+  GRASSLAND: { bg: COLORS.DARK_GREEN, accent: COLORS.GREEN },
+  DESERT: { bg: "rgb(139,69,19)", accent: "rgb(184,134,11)" }
+};
+
 function randInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -339,7 +349,16 @@ class Game {
     this.map_width = 20;
     this.map_height = 15;
     this.terrain = [];
-    this.generateMap();
+    this.currentBiome = "GRASSLAND";
+    this.biomeMap = {
+      GRASSLAND: [],
+      DESERT: []
+    };
+    this.playerBiomePos = {
+      GRASSLAND: { x: 5, y: 5 },
+      DESERT: { x: 5, y: 0 }
+    };
+    this.generateAllMaps();
 
     this.pokemonWithSprites = new Set(Object.keys(GEN4_POKEMON));
   }
@@ -387,30 +406,120 @@ class Game {
     return this.spriteCache["Pokecenter.png"] || null;
   }
 
-  generateMap() {
-    this.terrain = [];
+  saveGame() {
+    const saveData = {
+      playerX: this.player.x,
+      playerY: this.player.y,
+      pokeballs: this.player.pokeballs,
+      team: this.player.pokemon_team.map((p) => ({
+        name: p.name,
+        level: p.level,
+        current_hp: p.current_hp,
+        max_hp: p.max_hp,
+        attack: p.attack,
+        defense: p.defense,
+        speed: p.speed,
+        current_xp: p.current_xp,
+        xp_to_level: p.xp_to_level,
+        moves: p.moves
+      })),
+      lastOverworldPos: this.last_overworld_pos,
+      currentBiome: this.currentBiome,
+      playerBiomePos: this.playerBiomePos
+    };
+    localStorage.setItem("pokemonSave", JSON.stringify(saveData));
+    this.showMessage("Game saved!", 120);
+  }
+
+  loadGame() {
+    const saveData = localStorage.getItem("pokemonSave");
+    if (!saveData) {
+      this.showMessage("No save found!", 120);
+      return false;
+    }
+
+    try {
+      const data = JSON.parse(saveData);
+      this.player.x = data.playerX;
+      this.player.y = data.playerY;
+      this.player.pokeballs = data.pokeballs;
+      this.last_overworld_pos = data.lastOverworldPos;
+      this.currentBiome = data.currentBiome || "GRASSLAND";
+      this.playerBiomePos = data.playerBiomePos || { GRASSLAND: { x: 5, y: 5 }, DESERT: { x: 5, y: 0 } };
+
+      this.player.pokemon_team = data.team.map((pData) => {
+        const p = new Pokemon(pData.name, pData.level, this.spriteCache);
+        p.current_hp = pData.current_hp;
+        p.max_hp = pData.max_hp;
+        p.attack = pData.attack;
+        p.defense = pData.defense;
+        p.speed = pData.speed;
+        p.current_xp = pData.current_xp;
+        p.xp_to_level = pData.xp_to_level;
+        p.moves = pData.moves;
+        return p;
+      });
+
+      this.terrain = this.biomeMap[this.currentBiome];
+      this.state = "EXPLORE";
+      this.showMessage("Game loaded!", 120);
+      return true;
+    } catch (e) {
+      console.error("Error loading save:", e);
+      this.showMessage("Error loading save!", 120);
+      return false;
+    }
+  }
+
+  generateAllMaps() {
+    this.biomeMap.GRASSLAND = this.generateMapForBiome("GRASSLAND");
+    this.biomeMap.DESERT = this.generateMapForBiome("DESERT");
+    this.terrain = this.biomeMap.GRASSLAND;
+  }
+
+  generateMapForBiome(biome) {
+    const terrain = [];
     for (let y = 0; y < this.map_height; y += 1) {
       const row = [];
       for (let x = 0; x < this.map_width; x += 1) {
-        row.push(Math.random() < 0.3 ? "grass" : "path");
+        if (biome === "GRASSLAND") {
+          row.push(Math.random() < 0.3 ? "grass" : "path");
+        } else if (biome === "DESERT") {
+          row.push(Math.random() < 0.4 ? "sand" : "path");
+        }
       }
-      this.terrain.push(row);
+      terrain.push(row);
     }
 
     const cx = this.pokecenter_pos.x;
     const cy = this.pokecenter_pos.y;
-    this.terrain[cy][cx] = "center";
-    if (cx + 1 < this.map_width) this.terrain[cy][cx + 1] = "center";
-    if (cy + 1 < this.map_height) this.terrain[cy + 1][cx] = "center";
-    if (cy + 1 < this.map_height && cx + 1 < this.map_width) this.terrain[cy + 1][cx + 1] = "center";
+    if (biome === "GRASSLAND") {
+      terrain[cy][cx] = "center";
+      if (cx + 1 < this.map_width) terrain[cy][cx + 1] = "center";
+      if (cy + 1 < this.map_height) terrain[cy + 1][cx] = "center";
+      if (cy + 1 < this.map_height && cx + 1 < this.map_width) terrain[cy + 1][cx + 1] = "center";
 
-    for (let y = 0; y < this.map_height; y += 1) {
-      for (let x = 0; x < this.map_width; x += 1) {
-        if (x === this.player.x && y === this.player.y) continue;
-        if (this.terrain[y][x] === "center") continue;
-        if (Math.random() < 0.12) this.terrain[y][x] = "tree";
+      for (let y = 0; y < this.map_height; y += 1) {
+        for (let x = 0; x < this.map_width; x += 1) {
+          if (x === this.player.x && y === this.player.y) continue;
+          if (terrain[y][x] === "center") continue;
+          if (Math.random() < 0.12) terrain[y][x] = "tree";
+        }
+      }
+    } else if (biome === "DESERT") {
+      for (let y = 0; y < this.map_height; y += 1) {
+        for (let x = 0; x < this.map_width; x += 1) {
+          if (x === this.player.x && y === this.player.y) continue;
+          if (Math.random() < 0.08) terrain[y][x] = "rock";
+        }
       }
     }
+
+    return terrain;
+  }
+
+  generateMap() {
+    this.generateAllMaps();
   }
 
   showMessage(text, duration = 120) {
@@ -446,7 +555,9 @@ class Game {
       "3 - Piplup (Water)",
       "",
       "Arrow keys to move",
-      "Walk in tall grass to find wild Pokemon!"
+      "Walk in tall grass to find wild Pokemon!",
+      "",
+      "S - Save game | L - Load game"
     ];
 
     let y = 250;
@@ -465,6 +576,8 @@ class Game {
 
         if (tile === "grass") {
           this.drawRect(px, py, TILE_SIZE, TILE_SIZE, COLORS.DARK_GREEN, COLORS.BLACK);
+        } else if (tile === "sand") {
+          this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(184,134,11)", "rgb(139,69,19)");
         } else if (tile === "tree") {
           this.drawRect(px, py, TILE_SIZE, TILE_SIZE, COLORS.DARK_GREEN, COLORS.BLACK);
           this.ctx.beginPath();
@@ -484,6 +597,9 @@ class Game {
 
           this.drawRect(px + 16, py + 26, 8, 12, COLORS.TREE_BROWN_DARK);
           this.drawRect(px + 17, py + 27, 6, 10, COLORS.TREE_BROWN);
+        } else if (tile === "rock") {
+          this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(184,134,11)", "rgb(139,69,19)");
+          this.drawRect(px + 4, py + 4, 14, 14, "rgb(160,120,100)", "rgb(100,70,50)", 2);
         } else if (tile === "center") {
           const cx = this.pokecenter_pos.x;
           const cy = this.pokecenter_pos.y;
@@ -694,10 +810,41 @@ class Game {
   movePlayer(dx, dy) {
     const newX = this.player.x + dx;
     const newY = this.player.y + dy;
+    let outOfBounds = false;
+    let switchBiome = false;
 
+    // Check for out of bounds and biome switching
+    if (newY >= this.map_height) {
+      if (this.currentBiome === "GRASSLAND") {
+        switchBiome = true;
+        this.playerBiomePos.GRASSLAND = { x: this.player.x, y: this.player.y };
+        this.currentBiome = "DESERT";
+        this.terrain = this.biomeMap.DESERT;
+        this.player.x = this.playerBiomePos.DESERT.x;
+        this.player.y = 0;
+        this.showMessage("You entered the desert!", 120);
+        this.steps += 1;
+        return;
+      }
+    } else if (newY < 0) {
+      if (this.currentBiome === "DESERT") {
+        switchBiome = true;
+        this.playerBiomePos.DESERT = { x: this.player.x, y: this.player.y };
+        this.currentBiome = "GRASSLAND";
+        this.terrain = this.biomeMap.GRASSLAND;
+        this.player.x = this.playerBiomePos.GRASSLAND.x;
+        this.player.y = this.map_height - 1;
+        this.showMessage("You left the desert!", 120);
+        this.steps += 1;
+        return;
+      }
+    }
+
+    // Normal movement
     if (newX >= 0 && newX < this.map_width && newY >= 0 && newY < this.map_height) {
-      if (this.terrain[newY][newX] === "tree") {
-        this.showMessage("Boom in de weg!", 60);
+      const tile = this.terrain[newY][newX];
+      if (tile === "tree" || tile === "rock") {
+        this.showMessage(tile === "tree" ? "Boom in de weg!" : "Rots in de weg!", 60);
         return;
       }
 
@@ -706,13 +853,14 @@ class Game {
       this.steps += 1;
 
       if (this.terrain[this.player.y][this.player.x] === "center") {
+        this.playerBiomePos[this.currentBiome] = { x: newX, y: newY };
         this.last_overworld_pos = { x: newX, y: newY };
         this.state = "CENTER";
         this.showMessage("Welcome!", 120);
         return;
       }
 
-      if (this.terrain[this.player.y][this.player.x] === "grass") {
+      if (this.terrain[this.player.y][this.player.x] === "grass" || this.terrain[this.player.y][this.player.x] === "sand") {
         if (Math.random() < 0.15) this.startWildEncounter();
       }
     }
@@ -742,9 +890,10 @@ class Game {
     this.captureWildScale = 1;
 
     const playerLevel = active.level;
+    const biomePokemon = BIOME_POKEMON[this.currentBiome] || [];
     const available = [];
 
-    for (const name of Object.keys(GEN4_POKEMON)) {
+    for (const name of biomePokemon) {
       if (this.pokemonWithSprites.size && !this.pokemonWithSprites.has(name)) continue;
       const minEvo = this.getMinimumPokemonLevel(name);
       if (playerLevel >= minEvo) available.push(name);
@@ -752,8 +901,10 @@ class Game {
 
     let pool = available;
     if (!pool.length) {
-      const evolvedTargets = new Set(Object.values(EVOLUTIONS).map((v) => v[0]));
-      pool = Object.keys(GEN4_POKEMON).filter((n) => !evolvedTargets.has(n));
+      pool = biomePokemon;
+    }
+    if (!pool.length) {
+      pool = Object.keys(GEN4_POKEMON);
     }
 
     const pokemonName = pool[randInt(0, pool.length - 1)];
@@ -1090,6 +1241,10 @@ class Game {
           this.player.addPokemon(new Pokemon("Piplup", 5, this.spriteCache));
           this.state = "EXPLORE";
           this.showMessage("You chose Piplup!", 120);
+        } else if (event.key.toLowerCase() === "s") {
+          this.saveGame();
+        } else if (event.key.toLowerCase() === "l") {
+          this.loadGame();
         }
         return;
       }
@@ -1102,6 +1257,10 @@ class Game {
         else if (event.key.toLowerCase() === "h") {
           this.player.pokemon_team.forEach((p) => p.heal());
           this.showMessage("All Pokemon healed!", 120);
+        } else if (event.key.toLowerCase() === "s") {
+          this.saveGame();
+        } else if (event.key.toLowerCase() === "l") {
+          this.loadGame();
         } else if (event.key === "Tab") {
           this.prev_state = this.state;
           this.state = "INVENTORY";
@@ -1156,7 +1315,6 @@ class Game {
     } else if (this.state === "EXPLORE") {
       this.drawRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, COLORS.BLACK);
       this.drawMap();
-      this.drawUi();
     } else if (this.state === "BATTLE") {
       this.drawBattle();
     } else if (this.state === "CENTER") {
