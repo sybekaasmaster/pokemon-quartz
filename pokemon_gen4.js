@@ -308,6 +308,13 @@ class Player {
     return this.spriteCache["pokemon bsdp character.png"] || null;
   }
 
+  getSprite(biome = "GRASSLAND") {
+    if (biome === "DESERT") {
+      return this.spriteCache["pokemon bsdp character desert.png"] || this.spriteCache["pokemon bsdp character.png"] || null;
+    }
+    return this.spriteCache["pokemon bsdp character grass.png"] || this.spriteCache["pokemon bsdp character.png"] || null;
+  }
+
   addPokemon(pokemon) {
     if (this.pokemon_team.length < 6) {
       this.pokemon_team.push(pokemon);
@@ -372,6 +379,8 @@ class Game {
   async preloadSprites() {
     const files = [
       "pokemon bsdp character.png",
+      "pokemon bsdp character grass.png",
+      "pokemon bsdp character desert.png",
       "pokeball.png",
       "Pokecenter.png",
       ...Object.keys(GEN4_POKEMON).map((name) => `${name.toLowerCase()}.png`)
@@ -485,7 +494,7 @@ class Game {
         if (biome === "GRASSLAND") {
           row.push(Math.random() < 0.3 ? "grass" : "path");
         } else if (biome === "DESERT") {
-          row.push(Math.random() < 0.4 ? "sand" : "path");
+          row.push(Math.random() < 0.4 ? "grass" : "path");
         }
       }
       terrain.push(row);
@@ -575,7 +584,11 @@ class Game {
         const tile = this.terrain[y][x];
 
         if (tile === "grass") {
-          this.drawRect(px, py, TILE_SIZE, TILE_SIZE, COLORS.DARK_GREEN, COLORS.BLACK);
+          if (this.currentBiome === "GRASSLAND") {
+            this.drawRect(px, py, TILE_SIZE, TILE_SIZE, COLORS.DARK_GREEN, COLORS.BLACK);
+          } else if (this.currentBiome === "DESERT") {
+            this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(184,134,11)", "rgb(139,69,19)");
+          }
         } else if (tile === "sand") {
           this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(184,134,11)", "rgb(139,69,19)");
         } else if (tile === "tree") {
@@ -609,15 +622,20 @@ class Game {
             this.drawRect(px, py, TILE_SIZE, TILE_SIZE, COLORS.RED, COLORS.BLACK);
           }
         } else {
-          this.drawRect(px, py, TILE_SIZE, TILE_SIZE, COLORS.GREEN, COLORS.BLACK);
+          if (this.currentBiome === "GRASSLAND") {
+            this.drawRect(px, py, TILE_SIZE, TILE_SIZE, COLORS.GREEN, COLORS.BLACK);
+          } else if (this.currentBiome === "DESERT") {
+            this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(210,155,50)", "rgb(180,130,40)");
+          }
         }
       }
     }
 
     const playerX = this.player.x * TILE_SIZE;
     const playerY = this.player.y * TILE_SIZE;
-    if (this.player.sprite) {
-      this.ctx.drawImage(this.player.sprite, playerX, playerY, TILE_SIZE, TILE_SIZE);
+    const playerSprite = this.player.getSprite(this.currentBiome);
+    if (playerSprite) {
+      this.ctx.drawImage(playerSprite, playerX, playerY, TILE_SIZE, TILE_SIZE);
     } else {
       this.ctx.beginPath();
       this.ctx.fillStyle = COLORS.RED;
@@ -860,7 +878,7 @@ class Game {
         return;
       }
 
-      if (this.terrain[this.player.y][this.player.x] === "grass" || this.terrain[this.player.y][this.player.x] === "sand") {
+      if (this.terrain[this.player.y][this.player.x] === "grass") {
         if (Math.random() < 0.15) this.startWildEncounter();
       }
     }
@@ -1299,7 +1317,10 @@ class Game {
           this.inventory_selected = Math.min(this.player.pokemon_team.length - 1, this.inventory_selected + 1);
         } else if (event.key.toLowerCase() === "w") this.movePokemon(-1);
         else if (event.key.toLowerCase() === "s") this.movePokemon(1);
-        else if (event.key === "Escape" || event.key.toLowerCase() === "q") this.state = this.prev_state;
+        else if (event.ctrlKey && event.key.toLowerCase() === "s") {
+          event.preventDefault();
+          this.saveGame();
+        } else if (event.key === "Escape" || event.key.toLowerCase() === "q") this.state = this.prev_state;
         return;
       }
 
