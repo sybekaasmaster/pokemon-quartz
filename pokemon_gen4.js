@@ -197,7 +197,7 @@ const GEN4_POKEMON = {
 const BIOME_POKEMON = {
   GRASSLAND: ["Turtwig", "Chimchar", "Piplup", "Starly", "Bidoof", "Shinx", "Budew", "Buizel", "Riolu", "Croagunk"],
   DESERT: ["Cranidos", "Rampardos", "Shieldon", "Bastiodon", "Gible", "Gabite", "Garchomp", "Chimchar", "Monferno"],
-  BEACH: ["Buizel", "Floatzel", "Piplup", "Prinplup", "Empoleon", "Finneon", "Lumineon", "Shellos", "Gastrodon", "Mantyke", "Mantine"],
+  BEACH: ["Buizel", "Floatzel", "Finneon", "Lumineon", "Shellos", "Gastrodon", "Mantyke", "Mantine"],
   SNOW: ["Snover", "Abomasnow", "Snorunt", "Froslass", "Sneasel", "Weavile", "Piloswine", "Mamoswine", "Glaceon"]
 };
 
@@ -398,6 +398,11 @@ class Game {
     this.captureHideWild = false;
     this.captureWildScale = 1;
     this.pokeballOverlay = null;
+    this.hasBoat = false;
+    this.beachTrainerDefeated = false;
+    this.inTrainerBattle = false;
+    this.beachTrainerPos = { x: 13, y: 7 };
+    this.beachPierY = 7;
 
     this.map_width = 20;
     this.map_height = 15;
@@ -433,6 +438,7 @@ class Game {
       "pokemon bsdp character desert.png",
       "pokemon bsdp character beach.png",
       "pokemon bsdp character snow.png",
+      "pokemon trainer beach.jpg",
       "pokeball.png",
       "Pokecenter.png",
       ...Object.keys(GEN4_POKEMON).map((name) => `${name.toLowerCase()}.png`)
@@ -467,6 +473,13 @@ class Game {
     return this.spriteCache["Pokecenter.png"] || null;
   }
 
+  get trainerSprite() {
+    return this.spriteCache["pokemon trainer beach.jpg"]
+      || this.spriteCache["pokemon bsdp character desert.png"]
+      || this.spriteCache["pokemon bsdp character grass.png"]
+      || null;
+  }
+
   saveGame() {
     const saveData = {
       playerX: this.player.x,
@@ -486,7 +499,9 @@ class Game {
       })),
       lastOverworldPos: this.last_overworld_pos,
       currentBiome: this.currentBiome,
-      playerBiomePos: this.playerBiomePos
+      playerBiomePos: this.playerBiomePos,
+      hasBoat: this.hasBoat,
+      beachTrainerDefeated: this.beachTrainerDefeated
     };
     localStorage.setItem("pokemonSave", JSON.stringify(saveData));
     this.showMessage("Game saved!", 120);
@@ -506,6 +521,8 @@ class Game {
       this.player.pokeballs = data.pokeballs;
       this.last_overworld_pos = data.lastOverworldPos;
       this.currentBiome = data.currentBiome || "GRASSLAND";
+      this.hasBoat = Boolean(data.hasBoat);
+      this.beachTrainerDefeated = Boolean(data.beachTrainerDefeated);
       this.playerBiomePos = {
         GRASSLAND: { x: 5, y: 5 },
         DESERT: { x: 5, y: 0 },
@@ -556,7 +573,7 @@ class Game {
         } else if (biome === "DESERT") {
           row.push(Math.random() < 0.4 ? "grass" : "path");
         } else if (biome === "BEACH") {
-          row.push(y >= 10 ? "water" : "sand");
+          row.push(x < this.map_width / 2 ? "water" : "sand");
         } else if (biome === "SNOW") {
           row.push(Math.random() < 0.22 ? "ice" : "snow");
         }
@@ -591,14 +608,14 @@ class Game {
         }
       }
     } else if (biome === "BEACH") {
-      const pierX = 9;
-      const pierY = 5;
+      const splitX = this.map_width / 2;
+      const pierY = this.beachPierY;
       for (let y = 0; y < this.map_height; y += 1) {
         for (let x = 0; x < this.map_width; x += 1) {
           if (x === this.player.x && y === this.player.y) continue;
-          if (y >= 10 && x >= 4 && x <= 15) terrain[y][x] = "water";
-          if (x >= pierX && x <= pierX + 1 && y >= pierY && y <= 11) terrain[y][x] = "pier";
-          if ((x === 2 || x === 17) && y >= 3 && y <= 8 && Math.random() < 0.25) terrain[y][x] = "tree";
+          terrain[y][x] = x < splitX ? "water" : "sand";
+          if (y === pierY && x >= 0 && x <= 13) terrain[y][x] = "pier";
+          if (x >= 15 && y >= 2 && y <= 12 && Math.random() < 0.22) terrain[y][x] = "tree";
         }
       }
     } else if (biome === "SNOW") {
@@ -615,7 +632,7 @@ class Game {
   }
 
   getEncounterTilesForBiome(biome) {
-    if (biome === "BEACH") return ["sand", "pier"];
+    if (biome === "BEACH") return ["water"];
     if (biome === "SNOW") return ["snow", "ice"];
     return ["grass"];
   }
@@ -784,8 +801,23 @@ class Game {
       }
     }
 
+    if (this.currentBiome === "BEACH" && !this.beachTrainerDefeated) {
+      const tx = this.beachTrainerPos.x * TILE_SIZE;
+      const ty = this.beachTrainerPos.y * TILE_SIZE;
+      const sprite = this.trainerSprite;
+      if (sprite) {
+        this.ctx.drawImage(sprite, tx, ty, TILE_SIZE, TILE_SIZE);
+      } else {
+        this.drawRect(tx + 10, ty + 8, 20, 24, "rgb(200,70,70)", COLORS.BLACK, 1);
+      }
+    }
+
     const playerX = this.player.x * TILE_SIZE;
     const playerY = this.player.y * TILE_SIZE;
+    if (this.currentBiome === "BEACH" && this.hasBoat && this.terrain[this.player.y][this.player.x] === "water") {
+      this.drawBoat(playerX, playerY);
+    }
+
     const playerSprite = this.player.getSprite(this.currentBiome);
     if (playerSprite) {
       this.ctx.drawImage(playerSprite, playerX, playerY, TILE_SIZE, TILE_SIZE);
@@ -795,6 +827,18 @@ class Game {
       this.ctx.arc(playerX + TILE_SIZE / 2, playerY + TILE_SIZE / 2, TILE_SIZE / 3, 0, Math.PI * 2);
       this.ctx.fill();
     }
+  }
+
+  drawBoat(px, py) {
+    this.drawRect(px + 4, py + 22, 32, 9, "rgb(124,84,44)", "rgb(84,54,28)", 1);
+    this.ctx.beginPath();
+    this.ctx.fillStyle = "rgb(232,238,245)";
+    this.ctx.moveTo(px + 20, py + 8);
+    this.ctx.lineTo(px + 20, py + 21);
+    this.ctx.lineTo(px + 31, py + 18);
+    this.ctx.closePath();
+    this.ctx.fill();
+    this.drawRect(px + 18, py + 10, 2, 13, "rgb(90,70,44)");
   }
 
   drawCactus(px, py) {
@@ -882,7 +926,8 @@ class Game {
         const wildY = 80 + (120 - wildSize) / 2;
         this.ctx.drawImage(sprite, wildX, wildY, wildSize, wildSize);
       }
-      this.drawText(`Wild ${this.wild_pokemon.name} Lv.${this.wild_pokemon.level}`, 450, 220, COLORS.BLACK, 30);
+      const enemyLabel = this.inTrainerBattle ? `Trainer's ${this.wild_pokemon.name}` : `Wild ${this.wild_pokemon.name}`;
+      this.drawText(`${enemyLabel} Lv.${this.wild_pokemon.level}`, 450, 220, COLORS.BLACK, 30);
       this.drawText(`HP: ${this.wild_pokemon.current_hp}/${this.wild_pokemon.max_hp}`, 450, 250, COLORS.BLACK, 22);
       this.drawHpBar(450, 280, this.wild_pokemon.current_hp, this.wild_pokemon.max_hp);
     }
@@ -911,8 +956,12 @@ class Game {
 
         const moveCount = active.moves.slice(0, 4).length;
         y = 450 + moveCount * 25 + 30;
-        this.drawText(`5/C - Catch (Pokeballs: ${this.player.pokeballs})`, 50, y, COLORS.BLACK, 20);
-        this.drawText("6/R - Run", 50, y + 25, COLORS.BLACK, 20);
+        if (this.inTrainerBattle) {
+          this.drawText("Trainer battle: no catch / no run", 50, y, COLORS.BLACK, 20);
+        } else {
+          this.drawText(`5/C - Catch (Pokeballs: ${this.player.pokeballs})`, 50, y, COLORS.BLACK, 20);
+          this.drawText("6/R - Run", 50, y + 25, COLORS.BLACK, 20);
+        }
       }
     }
 
@@ -1013,7 +1062,8 @@ class Game {
     const newY = this.player.y + dy;
     if (newX < 0) {
       if (this.currentBiome === "GRASSLAND") {
-        this.switchBiome("BEACH", this.map_width - 1, this.player.y, "You reached the beach!");
+        const beachEntryY = Math.max(0, Math.min(this.map_height - 1, this.beachPierY));
+        this.switchBiome("BEACH", this.map_width - 1, beachEntryY, "You reached the beach!");
         this.steps += 1;
         return;
       }
@@ -1055,14 +1105,24 @@ class Game {
     // Normal movement
     if (newX >= 0 && newX < this.map_width && newY >= 0 && newY < this.map_height) {
       const tile = this.terrain[newY][newX];
-      if (tile === "tree" || tile === "rock" || tile === "water") {
-        this.showMessage(tile === "tree" ? "Boom in de weg!" : tile === "water" ? "Water in de weg!" : "Rots in de weg!", 60);
+      if (tile === "tree" || tile === "rock" || (tile === "water" && !this.hasBoat)) {
+        this.showMessage(tile === "tree" ? "Boom in de weg!" : tile === "water" ? "Water in de weg! Versla de trainer voor een boot." : "Rots in de weg!", 70);
         return;
       }
 
       this.player.x = newX;
       this.player.y = newY;
       this.steps += 1;
+
+      if (
+        this.currentBiome === "BEACH"
+        && !this.beachTrainerDefeated
+        && this.player.x === this.beachTrainerPos.x
+        && this.player.y === this.beachTrainerPos.y
+      ) {
+        this.startBeachTrainerBattle();
+        return;
+      }
 
       if (this.terrain[this.player.y][this.player.x] === "center") {
         this.playerBiomePos[this.currentBiome] = { x: newX, y: newY };
@@ -1128,8 +1188,21 @@ class Game {
     const level = randInt(minLevel, maxLevel);
 
     this.wild_pokemon = new Pokemon(pokemonName, level, this.spriteCache);
+    this.inTrainerBattle = false;
     this.state = "BATTLE";
     this.showMessage(`Wild ${pokemonName} appeared!`, 120);
+  }
+
+  startBeachTrainerBattle() {
+    if (this.beachTrainerDefeated) return;
+    const active = this.player.getActivePokemon();
+    if (!active) return;
+
+    const trainerLevel = Math.max(8, Math.min(45, active.level + 2));
+    this.wild_pokemon = new Pokemon("Floatzel", trainerLevel, this.spriteCache);
+    this.inTrainerBattle = true;
+    this.state = "BATTLE";
+    this.showMessage("Trainer Luca challenges you!", 140);
   }
 
   async battleAttack(moveIndex) {
@@ -1169,7 +1242,7 @@ class Game {
 
     if (!this.wild_pokemon.isAlive()) {
       const xpGain = this.wild_pokemon.level * 10;
-      this.showMessage(`Wild ${this.wild_pokemon.name} fainted! +${xpGain} XP`, 120);
+      this.showMessage(`${this.inTrainerBattle ? "Trainer's" : "Wild"} ${this.wild_pokemon.name} fainted! +${xpGain} XP`, 120);
       await sleep(1000);
 
       const levelResult = active.gainXp(xpGain);
@@ -1184,6 +1257,20 @@ class Game {
         this.showMessage(`${evo.from} evolved into ${evo.to}!`, 150);
         await sleep(1500);
       }
+
+      if (this.inTrainerBattle) {
+        this.beachTrainerDefeated = true;
+        if (!this.hasBoat) {
+          this.hasBoat = true;
+          this.showMessage("You won! Trainer Luca gave you a boat.", 180);
+          await sleep(1400);
+        } else {
+          this.showMessage("You defeated Trainer Luca!", 140);
+          await sleep(1000);
+        }
+        this.inTrainerBattle = false;
+      }
+
       this.state = "EXPLORE";
       return;
     }
@@ -1193,7 +1280,7 @@ class Game {
       const wildMoveData = MOVES[wildMove] || {};
 
       if (Math.random() * 100 > (wildMoveData.accuracy ?? 100)) {
-        this.showMessage(`Wild ${this.wild_pokemon.name}'s ${wildMove} missed!`, 120);
+        this.showMessage(`${this.inTrainerBattle ? "Trainer's" : "Wild"} ${this.wild_pokemon.name}'s ${wildMove} missed!`, 120);
       } else {
         const power = wildMoveData.power ?? 0;
         if (power > 0) {
@@ -1204,15 +1291,15 @@ class Game {
           damage += randInt(-10, 10);
           damage = Math.max(1, damage);
           active.takeDamage(damage);
-          this.showMessage(`Wild ${this.wild_pokemon.name} used ${wildMove}! ${damage} damage!`, 120);
+          this.showMessage(`${this.inTrainerBattle ? "Trainer's" : "Wild"} ${this.wild_pokemon.name} used ${wildMove}! ${damage} damage!`, 120);
         } else {
-          this.showMessage(`Wild ${this.wild_pokemon.name} used ${wildMove}!`, 120);
+          this.showMessage(`${this.inTrainerBattle ? "Trainer's" : "Wild"} ${this.wild_pokemon.name} used ${wildMove}!`, 120);
         }
       }
     } else {
       const damage = Math.max(1, (this.wild_pokemon.attack - Math.floor(active.defense / 2)) + randInt(-5, 5));
       active.takeDamage(damage);
-      this.showMessage(`Wild ${this.wild_pokemon.name} dealt ${damage} damage!`, 120);
+      this.showMessage(`${this.inTrainerBattle ? "Trainer's" : "Wild"} ${this.wild_pokemon.name} dealt ${damage} damage!`, 120);
     }
 
     await sleep(1000);
@@ -1345,6 +1432,11 @@ class Game {
   }
 
   async tryCatch() {
+    if (this.inTrainerBattle) {
+      this.showMessage("You cannot catch a trainer's Pokemon!", 120);
+      return;
+    }
+
     if (this.player.pokeballs <= 0) {
       this.showMessage("No Pokeballs left!", 120);
       return;
@@ -1406,6 +1498,12 @@ class Game {
   }
 
   async runFromBattle() {
+    if (this.inTrainerBattle) {
+      this.showMessage("You cannot run from a trainer battle!", 120);
+      await sleep(900);
+      return;
+    }
+
     if (Math.random() < 0.7) {
       this.showMessage("Got away safely!", 120);
       await sleep(1000);
