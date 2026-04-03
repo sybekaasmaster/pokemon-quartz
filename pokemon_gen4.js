@@ -40,7 +40,11 @@ const EVOLUTIONS = {
   Gible: ["Gabite", 24],
   Gabite: ["Garchomp", 48],
   Riolu: ["Lucario", 30],
-  Croagunk: ["Toxicroak", 37]
+  Croagunk: ["Toxicroak", 37],
+  Shellos: ["Gastrodon", 30],
+  Finneon: ["Lumineon", 31],
+  Snover: ["Abomasnow", 40],
+  Piloswine: ["Mamoswine", 34]
 };
 
 const MOVES = {
@@ -64,7 +68,9 @@ const MOVES = {
   "Poison Powder": { power: 0, accuracy: 75, type: "Poison" },
   "Sludge Bomb": { power: 90, accuracy: 100, type: "Poison" },
   "Stone Edge": { power: 100, accuracy: 80, type: "Rock" },
-  "Rock Slide": { power: 75, accuracy: 90, type: "Rock" }
+  "Rock Slide": { power: 75, accuracy: 90, type: "Rock" },
+  "Ice Shard": { power: 40, accuracy: 100, type: "Ice" },
+  "Ice Beam": { power: 90, accuracy: 100, type: "Ice" }
 };
 
 const POKEMON_MOVES = {
@@ -99,7 +105,22 @@ const POKEMON_MOVES = {
   Riolu: ["Mach Punch", "Close Combat"],
   Lucario: ["Mach Punch", "Close Combat", "Thunderbolt"],
   Croagunk: ["Poison Powder", "Mach Punch"],
-  Toxicroak: ["Poison Powder", "Sludge Bomb", "Close Combat"]
+  Toxicroak: ["Poison Powder", "Sludge Bomb", "Close Combat"],
+  Shellos: ["Tackle", "Water Gun"],
+  Gastrodon: ["Tackle", "Water Gun", "Stone Edge"],
+  Finneon: ["Tackle", "Water Gun"],
+  Lumineon: ["Tackle", "Water Gun", "Hydro Pump"],
+  Mantyke: ["Tackle", "Water Gun"],
+  Mantine: ["Tackle", "Water Gun", "Hydro Pump"],
+  Snover: ["Tackle", "Ice Shard"],
+  Abomasnow: ["Tackle", "Ice Shard", "Ice Beam"],
+  Snorunt: ["Tackle", "Ice Shard"],
+  Froslass: ["Ice Shard", "Ice Beam"],
+  Sneasel: ["Tackle", "Ice Shard"],
+  Weavile: ["Tackle", "Ice Shard", "Ice Beam"],
+  Piloswine: ["Tackle", "Ice Shard", "Stone Edge"],
+  Mamoswine: ["Tackle", "Ice Shard", "Stone Edge"],
+  Glaceon: ["Ice Shard", "Ice Beam"]
 };
 
 const TYPE_EFFECTIVENESS = {
@@ -155,17 +176,36 @@ const GEN4_POKEMON = {
   Riolu: { type: "Fighting", hp: 40, attack: 70, defense: 40, speed: 60 },
   Lucario: { type: "Fighting/Steel", hp: 70, attack: 110, defense: 70, speed: 90 },
   Croagunk: { type: "Poison/Fighting", hp: 48, attack: 61, defense: 40, speed: 50 },
-  Toxicroak: { type: "Poison/Fighting", hp: 83, attack: 106, defense: 65, speed: 85 }
+  Toxicroak: { type: "Poison/Fighting", hp: 83, attack: 106, defense: 65, speed: 85 },
+  Shellos: { type: "Water", hp: 76, attack: 48, defense: 48, speed: 34 },
+  Gastrodon: { type: "Water/Ground", hp: 111, attack: 83, defense: 68, speed: 39 },
+  Finneon: { type: "Water", hp: 49, attack: 49, defense: 56, speed: 66 },
+  Lumineon: { type: "Water", hp: 69, attack: 69, defense: 76, speed: 91 },
+  Mantyke: { type: "Water/Flying", hp: 45, attack: 20, defense: 50, speed: 50 },
+  Mantine: { type: "Water/Flying", hp: 85, attack: 40, defense: 70, speed: 70 },
+  Snover: { type: "Grass/Ice", hp: 60, attack: 62, defense: 50, speed: 40 },
+  Abomasnow: { type: "Grass/Ice", hp: 90, attack: 92, defense: 75, speed: 60 },
+  Snorunt: { type: "Ice", hp: 50, attack: 50, defense: 50, speed: 50 },
+  Froslass: { type: "Ice/Ghost", hp: 70, attack: 80, defense: 70, speed: 110 },
+  Sneasel: { type: "Dark/Ice", hp: 55, attack: 95, defense: 55, speed: 115 },
+  Weavile: { type: "Dark/Ice", hp: 70, attack: 120, defense: 65, speed: 125 },
+  Piloswine: { type: "Ice/Ground", hp: 100, attack: 100, defense: 80, speed: 50 },
+  Mamoswine: { type: "Ice/Ground", hp: 110, attack: 130, defense: 80, speed: 80 },
+  Glaceon: { type: "Ice", hp: 65, attack: 60, defense: 110, speed: 65 }
 };
 
 const BIOME_POKEMON = {
   GRASSLAND: ["Turtwig", "Chimchar", "Piplup", "Starly", "Bidoof", "Shinx", "Budew", "Buizel", "Riolu", "Croagunk"],
-  DESERT: ["Cranidos", "Rampardos", "Shieldon", "Bastiodon", "Gible", "Gabite", "Garchomp", "Chimchar", "Monferno"]
+  DESERT: ["Cranidos", "Rampardos", "Shieldon", "Bastiodon", "Gible", "Gabite", "Garchomp", "Chimchar", "Monferno"],
+  BEACH: ["Buizel", "Floatzel", "Piplup", "Prinplup", "Empoleon", "Finneon", "Lumineon", "Shellos", "Gastrodon", "Mantyke", "Mantine"],
+  SNOW: ["Snover", "Abomasnow", "Snorunt", "Froslass", "Sneasel", "Weavile", "Piloswine", "Mamoswine", "Glaceon"]
 };
 
 const BIOME_COLORS = {
   GRASSLAND: { bg: COLORS.DARK_GREEN, accent: COLORS.GREEN },
-  DESERT: { bg: "rgb(139,69,19)", accent: "rgb(184,134,11)" }
+  DESERT: { bg: "rgb(139,69,19)", accent: "rgb(184,134,11)" },
+  BEACH: { bg: "rgb(235,215,150)", accent: "rgb(70,145,190)" },
+  SNOW: { bg: "rgb(225,238,248)", accent: "rgb(170,205,235)" }
 };
 
 function randInt(min, max) {
@@ -312,6 +352,12 @@ class Player {
     if (biome === "DESERT") {
       return this.spriteCache["pokemon bsdp character desert.png"] || this.spriteCache["pokemon bsdp character.png"] || null;
     }
+    if (biome === "BEACH") {
+      return this.spriteCache["pokemon bsdp character beach.png"] || this.spriteCache["pokemon bsdp character desert.png"] || this.spriteCache["pokemon bsdp character.png"] || null;
+    }
+    if (biome === "SNOW") {
+      return this.spriteCache["pokemon bsdp character snow.png"] || this.spriteCache["pokemon bsdp character grass.png"] || this.spriteCache["pokemon bsdp character.png"] || null;
+    }
     return this.spriteCache["pokemon bsdp character grass.png"] || this.spriteCache["pokemon bsdp character.png"] || null;
   }
 
@@ -359,11 +405,15 @@ class Game {
     this.currentBiome = "GRASSLAND";
     this.biomeMap = {
       GRASSLAND: [],
-      DESERT: []
+      DESERT: [],
+      BEACH: [],
+      SNOW: []
     };
     this.playerBiomePos = {
       GRASSLAND: { x: 5, y: 5 },
-      DESERT: { x: 5, y: 0 }
+      DESERT: { x: 5, y: 0 },
+      BEACH: { x: 19, y: 7 },
+      SNOW: { x: 19, y: 7 }
     };
     this.generateAllMaps();
 
@@ -381,6 +431,8 @@ class Game {
       "pokemon bsdp character.png",
       "pokemon bsdp character grass.png",
       "pokemon bsdp character desert.png",
+      "pokemon bsdp character beach.png",
+      "pokemon bsdp character snow.png",
       "pokeball.png",
       "Pokecenter.png",
       ...Object.keys(GEN4_POKEMON).map((name) => `${name.toLowerCase()}.png`)
@@ -454,7 +506,13 @@ class Game {
       this.player.pokeballs = data.pokeballs;
       this.last_overworld_pos = data.lastOverworldPos;
       this.currentBiome = data.currentBiome || "GRASSLAND";
-      this.playerBiomePos = data.playerBiomePos || { GRASSLAND: { x: 5, y: 5 }, DESERT: { x: 5, y: 0 } };
+      this.playerBiomePos = {
+        GRASSLAND: { x: 5, y: 5 },
+        DESERT: { x: 5, y: 0 },
+        BEACH: { x: 19, y: 7 },
+        SNOW: { x: 19, y: 7 },
+        ...(data.playerBiomePos || {})
+      };
 
       this.player.pokemon_team = data.team.map((pData) => {
         const p = new Pokemon(pData.name, pData.level, this.spriteCache);
@@ -483,6 +541,8 @@ class Game {
   generateAllMaps() {
     this.biomeMap.GRASSLAND = this.generateMapForBiome("GRASSLAND");
     this.biomeMap.DESERT = this.generateMapForBiome("DESERT");
+    this.biomeMap.BEACH = this.generateMapForBiome("BEACH");
+    this.biomeMap.SNOW = this.generateMapForBiome("SNOW");
     this.terrain = this.biomeMap.GRASSLAND;
   }
 
@@ -495,6 +555,10 @@ class Game {
           row.push(Math.random() < 0.3 ? "grass" : "path");
         } else if (biome === "DESERT") {
           row.push(Math.random() < 0.4 ? "grass" : "path");
+        } else if (biome === "BEACH") {
+          row.push(y >= 10 ? "water" : "sand");
+        } else if (biome === "SNOW") {
+          row.push(Math.random() < 0.22 ? "ice" : "snow");
         }
       }
       terrain.push(row);
@@ -526,9 +590,43 @@ class Game {
           if (Math.random() < 0.08) terrain[y][x] = "rock";
         }
       }
+    } else if (biome === "BEACH") {
+      const pierX = 9;
+      const pierY = 5;
+      for (let y = 0; y < this.map_height; y += 1) {
+        for (let x = 0; x < this.map_width; x += 1) {
+          if (x === this.player.x && y === this.player.y) continue;
+          if (y >= 10 && x >= 4 && x <= 15) terrain[y][x] = "water";
+          if (x >= pierX && x <= pierX + 1 && y >= pierY && y <= 11) terrain[y][x] = "pier";
+          if ((x === 2 || x === 17) && y >= 3 && y <= 8 && Math.random() < 0.25) terrain[y][x] = "tree";
+        }
+      }
+    } else if (biome === "SNOW") {
+      for (let y = 0; y < this.map_height; y += 1) {
+        for (let x = 0; x < this.map_width; x += 1) {
+          if (x === this.player.x && y === this.player.y) continue;
+          if (Math.random() < 0.08) terrain[y][x] = "tree";
+          if (Math.random() < 0.12) terrain[y][x] = "ice";
+        }
+      }
     }
 
     return terrain;
+  }
+
+  getEncounterTilesForBiome(biome) {
+    if (biome === "BEACH") return ["sand", "pier"];
+    if (biome === "SNOW") return ["snow", "ice"];
+    return ["grass"];
+  }
+
+  switchBiome(nextBiome, entryX, entryY, message) {
+    this.playerBiomePos[this.currentBiome] = { x: this.player.x, y: this.player.y };
+    this.currentBiome = nextBiome;
+    this.terrain = this.biomeMap[nextBiome];
+    this.player.x = entryX;
+    this.player.y = entryY;
+    this.showMessage(message, 120);
   }
 
   generateMap() {
@@ -592,9 +690,25 @@ class Game {
             this.drawRect(px, py, TILE_SIZE, TILE_SIZE, COLORS.DARK_GREEN, COLORS.BLACK);
           } else if (this.currentBiome === "DESERT") {
             this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(184,134,11)", "rgb(139,69,19)");
+          } else if (this.currentBiome === "BEACH") {
+            this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(238,219,157)", "rgb(210,185,120)");
+          } else if (this.currentBiome === "SNOW") {
+            this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(236,244,250)", "rgb(200,220,235)");
           }
         } else if (tile === "sand") {
-          this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(184,134,11)", "rgb(139,69,19)");
+          this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(242,226,162)", "rgb(212,188,126)");
+        } else if (tile === "water") {
+          this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(75,145,205)", "rgb(45,95,160)");
+          this.drawRect(px + 4, py + 10, TILE_SIZE - 8, 3, "rgba(255,255,255,0.55)");
+        } else if (tile === "pier") {
+          this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(154,112,68)", "rgb(100,72,40)");
+          this.drawRect(px + 4, py + 5, TILE_SIZE - 8, 6, "rgb(168,126,82)", "rgb(120,84,50)");
+          this.drawRect(px + 4, py + 18, TILE_SIZE - 8, 4, "rgb(130,92,54)");
+        } else if (tile === "snow") {
+          this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(242,248,252)", "rgb(208,224,236)");
+        } else if (tile === "ice") {
+          this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(189,229,248)", "rgb(120,178,210)");
+          this.drawRect(px + 6, py + 6, 12, 12, "rgba(255,255,255,0.35)");
         } else if (tile === "tree") {
           if (this.currentBiome === "GRASSLAND") {
             this.drawRect(px, py, TILE_SIZE, TILE_SIZE, COLORS.DARK_GREEN, COLORS.BLACK);
@@ -617,6 +731,37 @@ class Game {
             this.drawRect(px + 17, py + 27, 6, 10, COLORS.TREE_BROWN);
           } else if (this.currentBiome === "DESERT") {
             this.drawCactus(px, py);
+          } else if (this.currentBiome === "BEACH") {
+            this.drawRect(px + 15, py + 12, 6, 18, "rgb(142,100,60)", "rgb(95,66,36)", 1);
+            this.ctx.beginPath();
+            this.ctx.fillStyle = "rgb(63,150,95)";
+            this.ctx.arc(px + 17, py + 12, 7, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.beginPath();
+            this.ctx.arc(px + 23, py + 12, 7, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.beginPath();
+            this.ctx.arc(px + 20, py + 8, 7, 0, Math.PI * 2);
+            this.ctx.fill();
+          } else if (this.currentBiome === "SNOW") {
+            this.drawRect(px + 17, py + 14, 6, 14, "rgb(110,84,52)", "rgb(75,58,36)", 1);
+            this.ctx.beginPath();
+            this.ctx.fillStyle = "rgb(36,110,62)";
+            this.ctx.moveTo(px + 20, py + 4);
+            this.ctx.lineTo(px + 12, py + 14);
+            this.ctx.lineTo(px + 28, py + 14);
+            this.ctx.closePath();
+            this.ctx.fill();
+            this.ctx.beginPath();
+            this.ctx.moveTo(px + 20, py + 9);
+            this.ctx.lineTo(px + 10, py + 20);
+            this.ctx.lineTo(px + 30, py + 20);
+            this.ctx.closePath();
+            this.ctx.fill();
+            this.ctx.fillStyle = "rgb(245,250,255)";
+            this.ctx.beginPath();
+            this.ctx.arc(px + 20, py + 8, 4, 0, Math.PI * 2);
+            this.ctx.fill();
           }
         } else if (tile === "rock") {
           this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(184,134,11)", "rgb(139,69,19)");
@@ -653,16 +798,32 @@ class Game {
   }
 
   drawCactus(px, py) {
-    this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(184,134,11)", "rgb(139,69,19)");
-    this.drawRect(px + 14, py + 6, 12, 28, "rgb(76,153,76)", "rgb(50,100,50)", 1);
-    this.drawRect(px + 4, py + 12, 10, 8, "rgb(76,153,76)", "rgb(50,100,50)", 1);
-    this.drawRect(px + 26, py + 12, 10, 8, "rgb(76,153,76)", "rgb(50,100,50)", 1);
+    this.ctx.fillStyle = "rgba(0,0,0,0.15)";
+    this.ctx.beginPath();
+    this.ctx.ellipse(px + 20, py + 34, 12, 4, 0, 0, Math.PI * 2);
+    this.ctx.fill();
 
-    this.ctx.fillStyle = "rgb(200,50,50)";
-    for (let i = 0; i < 6; i += 1) {
-      this.ctx.fillRect(px + 18 + (i % 2) * 2, py + 10 + i * 4, 2, 2);
-      this.ctx.fillRect(px + 8 + (i % 2) * 2, py + 12 + i * 3, 2, 2);
-      this.ctx.fillRect(px + 28 + (i % 2) * 2, py + 12 + i * 3, 2, 2);
+    this.drawRect(px + 14, py + 6, 12, 26, "rgb(88,176,88)", "rgb(38,90,38)", 1);
+    this.drawRect(px + 12, py + 10, 4, 14, "rgb(88,176,88)", "rgb(38,90,38)", 1);
+    this.drawRect(px + 24, py + 12, 4, 12, "rgb(88,176,88)", "rgb(38,90,38)", 1);
+    this.drawRect(px + 8, py + 14, 4, 9, "rgb(88,176,88)", "rgb(38,90,38)", 1);
+    this.drawRect(px + 28, py + 14, 4, 9, "rgb(88,176,88)", "rgb(38,90,38)", 1);
+
+    this.ctx.fillStyle = "rgb(54,126,54)";
+    this.ctx.fillRect(px + 16, py + 8, 3, 22);
+    this.ctx.fillRect(px + 20, py + 8, 2, 22);
+    this.ctx.fillRect(px + 15, py + 14, 14, 2);
+
+    this.ctx.fillStyle = "rgb(236,120,150)";
+    this.ctx.beginPath();
+    this.ctx.arc(px + 20, py + 5, 3, 0, Math.PI * 2);
+    this.ctx.fill();
+
+    this.ctx.fillStyle = "rgb(240,240,200)";
+    for (let i = 0; i < 5; i += 1) {
+      this.ctx.fillRect(px + 17 + (i % 2) * 2, py + 10 + i * 4, 1, 1);
+      this.ctx.fillRect(px + 10 + (i % 2) * 2, py + 15 + i * 3, 1, 1);
+      this.ctx.fillRect(px + 30 + (i % 2) * 2, py + 15 + i * 3, 1, 1);
     }
   }
 
@@ -850,31 +1011,42 @@ class Game {
   movePlayer(dx, dy) {
     const newX = this.player.x + dx;
     const newY = this.player.y + dy;
-    let outOfBounds = false;
-    let switchBiome = false;
+    if (newX < 0) {
+      if (this.currentBiome === "GRASSLAND") {
+        this.switchBiome("BEACH", this.map_width - 1, this.player.y, "You reached the beach!");
+        this.steps += 1;
+        return;
+      }
+
+      if (this.currentBiome === "BEACH") {
+        this.switchBiome("SNOW", this.map_width - 1, this.player.y, "You entered the snowy coast!");
+        this.steps += 1;
+        return;
+      }
+    } else if (newX >= this.map_width) {
+      if (this.currentBiome === "BEACH") {
+        this.switchBiome("GRASSLAND", 0, this.player.y, "You left the beach!");
+        this.steps += 1;
+        return;
+      }
+
+      if (this.currentBiome === "SNOW") {
+        this.switchBiome("BEACH", 0, this.player.y, "You left the snow!");
+        this.steps += 1;
+        return;
+      }
+    }
 
     // Check for out of bounds and biome switching
     if (newY >= this.map_height) {
       if (this.currentBiome === "GRASSLAND") {
-        switchBiome = true;
-        this.playerBiomePos.GRASSLAND = { x: this.player.x, y: this.player.y };
-        this.currentBiome = "DESERT";
-        this.terrain = this.biomeMap.DESERT;
-        this.player.x = this.playerBiomePos.DESERT.x;
-        this.player.y = 0;
-        this.showMessage("You entered the desert!", 120);
+        this.switchBiome("DESERT", this.playerBiomePos.DESERT.x, 0, "You entered the desert!");
         this.steps += 1;
         return;
       }
     } else if (newY < 0) {
       if (this.currentBiome === "DESERT") {
-        switchBiome = true;
-        this.playerBiomePos.DESERT = { x: this.player.x, y: this.player.y };
-        this.currentBiome = "GRASSLAND";
-        this.terrain = this.biomeMap.GRASSLAND;
-        this.player.x = this.playerBiomePos.GRASSLAND.x;
-        this.player.y = this.map_height - 1;
-        this.showMessage("You left the desert!", 120);
+        this.switchBiome("GRASSLAND", this.playerBiomePos.GRASSLAND.x, this.map_height - 1, "You left the desert!");
         this.steps += 1;
         return;
       }
@@ -883,8 +1055,8 @@ class Game {
     // Normal movement
     if (newX >= 0 && newX < this.map_width && newY >= 0 && newY < this.map_height) {
       const tile = this.terrain[newY][newX];
-      if (tile === "tree" || tile === "rock") {
-        this.showMessage(tile === "tree" ? "Boom in de weg!" : "Rots in de weg!", 60);
+      if (tile === "tree" || tile === "rock" || tile === "water") {
+        this.showMessage(tile === "tree" ? "Boom in de weg!" : tile === "water" ? "Water in de weg!" : "Rots in de weg!", 60);
         return;
       }
 
@@ -900,8 +1072,10 @@ class Game {
         return;
       }
 
-      if (this.terrain[this.player.y][this.player.x] === "grass") {
-        if (Math.random() < 0.15) this.startWildEncounter();
+      const encounterTiles = this.getEncounterTilesForBiome(this.currentBiome);
+      if (encounterTiles.includes(this.terrain[this.player.y][this.player.x])) {
+        const encounterRate = this.currentBiome === "BEACH" ? 0.18 : this.currentBiome === "SNOW" ? 0.16 : 0.15;
+        if (Math.random() < encounterRate) this.startWildEncounter();
       }
     }
   }
