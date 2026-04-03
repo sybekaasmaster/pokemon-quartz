@@ -380,7 +380,12 @@ class Player {
 class Game {
   constructor(canvas) {
     this.canvas = canvas;
+    this.pixelRatio = Math.max(1, window.devicePixelRatio || 1);
+    this.canvas.width = Math.floor(SCREEN_WIDTH * this.pixelRatio);
+    this.canvas.height = Math.floor(SCREEN_HEIGHT * this.pixelRatio);
     this.ctx = canvas.getContext("2d");
+    this.ctx.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
+    this.ctx.imageSmoothingEnabled = true;
     this.spriteDirs = [""];
     this.spriteCache = {};
 
@@ -674,7 +679,7 @@ class Game {
 
   startScreen() {
     this.drawRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, COLORS.BLUE);
-    this.drawText("POKEMON GEN 4 ADVENTURE", SCREEN_WIDTH / 2, 150, COLORS.YELLOW, 40, "center");
+    this.drawText("POKEMON QUARTZ", SCREEN_WIDTH / 2, 150, COLORS.YELLOW, 40, "center");
 
     const lines = [
       "Choose your starter Pokemon:",
