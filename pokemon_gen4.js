@@ -519,6 +519,10 @@ class Game {
       for (let y = 0; y < this.map_height; y += 1) {
         for (let x = 0; x < this.map_width; x += 1) {
           if (x === this.player.x && y === this.player.y) continue;
+          if (Math.random() < 0.06) {
+            terrain[y][x] = "tree";
+            continue;
+          }
           if (Math.random() < 0.08) terrain[y][x] = "rock";
         }
       }
