@@ -408,7 +408,7 @@ class Game {
     this.inTrainerBattle = false;
     this.titleReady = false;
     this.titlePulse = 0;
-    this.titleScreenImageName = "Pokemon quartz title screen.png";
+    this.titleScreenImageName = "Pokemon quartz startscreen.png";
     this.beachTrainerPos = { x: 13, y: 7 };
     this.beachPierY = 7;
 
@@ -500,7 +500,7 @@ class Game {
 
   get titleScreenSprite() {
     return this.spriteCache[this.titleScreenImageName]
-      || this.spriteCache["Pokemon quartz startscreen.png"]
+      || this.spriteCache["Pokemon quartz title screen.png"]
       || null;
   }
 
