@@ -24,14 +24,14 @@ body {
 }
 
 .wrap {
-  width: min(100%, 860px);
+  width: min(100%, 980px);
   display: grid;
   gap: 10px;
   justify-items: center;
 }
 
 canvas {
-  width: min(100%, 800px);
+  width: min(100%, 920px);
   height: auto;
   border: 4px solid #101010;
   image-rendering: auto;
