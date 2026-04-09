@@ -683,7 +683,7 @@ class Game {
         for (let x = 0; x < this.map_width; x += 1) {
           if (x === this.player.x && y === this.player.y) continue;
           terrain[y][x] = x < splitX ? "water" : "sand";
-          if (y === pierY && x >= 0 && x <= 13) terrain[y][x] = "pier";
+          if (y === pierY && x >= 0 && x <= 14) terrain[y][x] = "pier";
           if (x >= 15 && y >= 2 && y <= 12 && Math.random() < 0.22) terrain[y][x] = "tree";
         }
       }
@@ -837,8 +837,10 @@ class Game {
             this.drawRect(px + 16, py + 26, 8, 12, COLORS.TREE_BROWN_DARK);
             this.drawRect(px + 17, py + 27, 6, 10, COLORS.TREE_BROWN);
           } else if (this.currentBiome === "DESERT") {
+            this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(210,155,50)", "rgb(180,130,40)");
             this.drawCactus(px, py);
           } else if (this.currentBiome === "BEACH") {
+            this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(242,226,162)", "rgb(212,188,126)");
             this.drawRect(px + 15, py + 12, 6, 18, "rgb(142,100,60)", "rgb(95,66,36)", 1);
             this.ctx.beginPath();
             this.ctx.fillStyle = "rgb(63,150,95)";
@@ -920,15 +922,39 @@ class Game {
   }
 
   drawBoat(px, py) {
-    this.drawRect(px + 4, py + 22, 32, 9, "rgb(124,84,44)", "rgb(84,54,28)", 1);
+    // Wake behind the boat to make movement on water read clearly.
+    this.ctx.fillStyle = "rgba(225,245,255,0.65)";
     this.ctx.beginPath();
-    this.ctx.fillStyle = "rgb(232,238,245)";
-    this.ctx.moveTo(px + 20, py + 8);
-    this.ctx.lineTo(px + 20, py + 21);
-    this.ctx.lineTo(px + 31, py + 18);
+    this.ctx.ellipse(px + 12, py + 29, 9, 3, 0, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.beginPath();
+    this.ctx.ellipse(px + 28, py + 31, 7, 2.5, 0, 0, Math.PI * 2);
+    this.ctx.fill();
+
+    this.ctx.beginPath();
+    this.ctx.fillStyle = "rgb(126,82,44)";
+    this.ctx.moveTo(px + 4, py + 27);
+    this.ctx.lineTo(px + 11, py + 20);
+    this.ctx.lineTo(px + 29, py + 20);
+    this.ctx.lineTo(px + 36, py + 27);
+    this.ctx.lineTo(px + 31, py + 33);
+    this.ctx.lineTo(px + 9, py + 33);
     this.ctx.closePath();
     this.ctx.fill();
-    this.drawRect(px + 18, py + 10, 2, 13, "rgb(90,70,44)");
+    this.ctx.strokeStyle = "rgb(80,52,28)";
+    this.ctx.lineWidth = 1;
+    this.ctx.stroke();
+
+    this.drawRect(px + 19, py + 12, 2, 10, "rgb(92,70,46)");
+    this.ctx.beginPath();
+    this.ctx.fillStyle = "rgb(242,246,250)";
+    this.ctx.moveTo(px + 21, py + 12);
+    this.ctx.lineTo(px + 30, py + 17);
+    this.ctx.lineTo(px + 21, py + 21);
+    this.ctx.closePath();
+    this.ctx.fill();
+
+    this.drawRect(px + 15, py + 24, 10, 4, "rgb(174,132,82)", "rgb(110,76,42)", 1);
   }
 
   drawCactus(px, py) {
