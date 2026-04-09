@@ -406,6 +406,9 @@ class Game {
     this.hasBoat = false;
     this.beachTrainerDefeated = false;
     this.inTrainerBattle = false;
+    this.titleReady = false;
+    this.titlePulse = 0;
+    this.titleScreenImageName = "Pokemon quartz title screen.png";
     this.beachTrainerPos = { x: 13, y: 7 };
     this.beachPierY = 7;
 
@@ -430,6 +433,15 @@ class Game {
     this.pokemonWithSprites = new Set(Object.keys(GEN4_POKEMON));
   }
 
+  getDefaultBiomePositions() {
+    return {
+      GRASSLAND: { x: Math.floor(this.map_width / 2), y: Math.floor(this.map_height / 2) },
+      DESERT: { x: 5, y: 0 },
+      BEACH: { x: 19, y: 7 },
+      SNOW: { x: 19, y: 7 }
+    };
+  }
+
   async init() {
     await this.preloadSprites();
     this.bindKeys();
@@ -446,6 +458,7 @@ class Game {
       "pokemon trainer beach.jpg",
       "pokeball.png",
       "Pokecenter.png",
+      this.titleScreenImageName,
       ...Object.keys(GEN4_POKEMON).map((name) => `${name.toLowerCase()}.png`)
     ];
 
@@ -482,6 +495,12 @@ class Game {
     return this.spriteCache["pokemon trainer beach.jpg"]
       || this.spriteCache["pokemon bsdp character desert.png"]
       || this.spriteCache["pokemon bsdp character grass.png"]
+      || null;
+  }
+
+  get titleScreenSprite() {
+    return this.spriteCache[this.titleScreenImageName]
+      || this.spriteCache["Pokemon quartz startscreen.png"]
       || null;
   }
 
@@ -528,11 +547,9 @@ class Game {
       this.currentBiome = data.currentBiome || "GRASSLAND";
       this.hasBoat = Boolean(data.hasBoat);
       this.beachTrainerDefeated = Boolean(data.beachTrainerDefeated);
+      const defaultPos = this.getDefaultBiomePositions();
       this.playerBiomePos = {
-        GRASSLAND: { x: 5, y: 5 },
-        DESERT: { x: 5, y: 0 },
-        BEACH: { x: 19, y: 7 },
-        SNOW: { x: 19, y: 7 },
+        ...defaultPos,
         ...(data.playerBiomePos || {})
       };
 
@@ -558,6 +575,47 @@ class Game {
       this.showMessage("Error loading save!", 120);
       return false;
     }
+  }
+
+  startNewGame(starterName) {
+    const defaultPos = this.getDefaultBiomePositions();
+    this.player = new Player(defaultPos.GRASSLAND.x, defaultPos.GRASSLAND.y, this.spriteCache);
+    this.playerBiomePos = defaultPos;
+    this.currentBiome = "GRASSLAND";
+    this.steps = 0;
+    this.hasBoat = false;
+    this.beachTrainerDefeated = false;
+    this.inTrainerBattle = false;
+    this.wild_pokemon = null;
+    this.captureHideWild = false;
+    this.captureWildScale = 1;
+    this.pokeballOverlay = null;
+    this.last_overworld_pos = { x: defaultPos.GRASSLAND.x, y: defaultPos.GRASSLAND.y };
+
+    this.generateAllMaps();
+    this.player.addPokemon(new Pokemon(starterName, 5, this.spriteCache));
+    this.state = "EXPLORE";
+    this.showMessage(`You chose ${starterName}!`, 120);
+  }
+
+  sendToNearestPokecenter() {
+    const cx = this.pokecenter_pos.x;
+    const cy = this.pokecenter_pos.y;
+
+    this.player.pokemon_team.forEach((p) => p.heal());
+    this.currentBiome = "GRASSLAND";
+    this.terrain = this.biomeMap.GRASSLAND;
+    this.player.x = cx;
+    this.player.y = cy;
+    this.playerBiomePos.GRASSLAND = { x: cx, y: cy };
+    this.last_overworld_pos = { x: cx, y: cy };
+    this.wild_pokemon = null;
+    this.inTrainerBattle = false;
+    this.captureHideWild = false;
+    this.captureWildScale = 1;
+    this.pokeballOverlay = null;
+    this.state = "CENTER";
+    this.showMessage("All Pokemon fainted! You were rushed to the nearest Pokecenter.", 180);
   }
 
   generateAllMaps() {
@@ -678,25 +736,45 @@ class Game {
   }
 
   startScreen() {
-    this.drawRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, COLORS.BLUE);
-    this.drawText("POKEMON QUARTZ", SCREEN_WIDTH / 2, 150, COLORS.YELLOW, 40, "center");
+    const bg = this.titleScreenSprite;
+    if (bg) {
+      const scale = Math.max(SCREEN_WIDTH / bg.width, SCREEN_HEIGHT / bg.height);
+      const drawW = bg.width * scale;
+      const drawH = bg.height * scale;
+      const drawX = (SCREEN_WIDTH - drawW) / 2;
+      const drawY = (SCREEN_HEIGHT - drawH) / 2;
+      this.ctx.drawImage(bg, drawX, drawY, drawW, drawH);
+    } else {
+      this.drawRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, COLORS.BLUE);
+      this.drawText("POKEMON QUARTZ", SCREEN_WIDTH / 2, 150, COLORS.YELLOW, 40, "center");
+    }
 
+    this.drawRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, "rgba(0,0,0,0.15)");
+    this.drawRect(0, SCREEN_HEIGHT - 120, SCREEN_WIDTH, 120, "rgba(0,0,0,0.45)");
+
+    this.titlePulse += 0.06;
+    const pulse = 0.45 + ((Math.sin(this.titlePulse) + 1) / 2) * 0.55;
+
+    if (!this.titleReady) {
+      this.drawText("Press ENTER to start", SCREEN_WIDTH / 2, SCREEN_HEIGHT - 62, `rgba(255,255,255,${pulse.toFixed(3)})`, 34, "center");
+      this.drawText("L - Load save", SCREEN_WIDTH / 2, SCREEN_HEIGHT - 24, COLORS.WHITE, 20, "center");
+      return;
+    }
+
+    this.drawRect(140, 190, 520, 250, "rgba(0,0,0,0.65)", "rgba(255,255,255,0.7)", 2);
     const lines = [
-      "Choose your starter Pokemon:",
+      "Choose your starter Pokemon",
       "1 - Turtwig (Grass)",
       "2 - Chimchar (Fire)",
       "3 - Piplup (Water)",
       "",
-      "Arrow keys to move",
-      "Walk in tall grass to find wild Pokemon!",
-      "",
-      "S - Save game | L - Load game"
+      "Esc - Back to title"
     ];
 
-    let y = 250;
+    let y = 240;
     for (const line of lines) {
-      this.drawText(line, SCREEN_WIDTH / 2, y, COLORS.WHITE, 24, "center");
-      y += 30;
+      this.drawText(line, SCREEN_WIDTH / 2, y, COLORS.WHITE, 28, "center");
+      y += 34;
     }
   }
 
@@ -1313,10 +1391,7 @@ class Game {
       this.showMessage(`${active.name} fainted!`, 120);
       await sleep(1500);
       if (!this.player.getActivePokemon()) {
-        this.showMessage("All Pokemon fainted! Game Over!", 180);
-        await sleep(3000);
-        this.state = "START";
-        this.player.pokemon_team = [];
+        this.sendToNearestPokecenter();
       } else {
         this.state = "EXPLORE";
       }
@@ -1498,6 +1573,10 @@ class Game {
         const damage = Math.max(1, (this.wild_pokemon.attack - Math.floor(active.defense / 2)) + randInt(-5, 5));
         active.takeDamage(damage);
         this.showMessage(`Wild ${this.wild_pokemon.name} dealt ${damage} damage!`, 120);
+        if (!this.player.getActivePokemon()) {
+          await sleep(1000);
+          this.sendToNearestPokecenter();
+        }
       }
     }
   }
@@ -1521,6 +1600,10 @@ class Game {
         const damage = Math.max(1, (this.wild_pokemon.attack - Math.floor(active.defense / 2)) + randInt(-5, 5));
         active.takeDamage(damage);
         this.showMessage(`Wild ${this.wild_pokemon.name} dealt ${damage} damage!`, 120);
+        if (!this.player.getActivePokemon()) {
+          await sleep(1000);
+          this.sendToNearestPokecenter();
+        }
       }
     }
   }
@@ -1546,20 +1629,16 @@ class Game {
       if (event.key === "Tab") event.preventDefault();
 
       if (this.state === "START") {
-        if (event.key === "1") {
-          this.player.addPokemon(new Pokemon("Turtwig", 5, this.spriteCache));
-          this.state = "EXPLORE";
-          this.showMessage("You chose Turtwig!", 120);
-        } else if (event.key === "2") {
-          this.player.addPokemon(new Pokemon("Chimchar", 5, this.spriteCache));
-          this.state = "EXPLORE";
-          this.showMessage("You chose Chimchar!", 120);
-        } else if (event.key === "3") {
-          this.player.addPokemon(new Pokemon("Piplup", 5, this.spriteCache));
-          this.state = "EXPLORE";
-          this.showMessage("You chose Piplup!", 120);
-        } else if (event.key.toLowerCase() === "s") {
-          this.saveGame();
+        if (event.key === "Enter" || event.key === " ") {
+          this.titleReady = true;
+        } else if ((event.key === "Escape" || event.key.toLowerCase() === "q") && this.titleReady) {
+          this.titleReady = false;
+        } else if (this.titleReady && event.key === "1") {
+          this.startNewGame("Turtwig");
+        } else if (this.titleReady && event.key === "2") {
+          this.startNewGame("Chimchar");
+        } else if (this.titleReady && event.key === "3") {
+          this.startNewGame("Piplup");
         } else if (event.key.toLowerCase() === "l") {
           this.loadGame();
         }
