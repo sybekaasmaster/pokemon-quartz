@@ -406,6 +406,8 @@ class Game {
     this.hasBoat = false;
     this.beachTrainerDefeated = false;
     this.inTrainerBattle = false;
+    this.battleSwitchMode = false;
+    this.battleForcedSwitch = false;
     this.titleReady = false;
     this.titlePulse = 0;
     this.titleScreenImageName = "Pokemon quartz title screen.png";
@@ -586,6 +588,8 @@ class Game {
     this.hasBoat = false;
     this.beachTrainerDefeated = false;
     this.inTrainerBattle = false;
+    this.battleSwitchMode = false;
+    this.battleForcedSwitch = false;
     this.wild_pokemon = null;
     this.captureHideWild = false;
     this.captureWildScale = 1;
@@ -611,6 +615,8 @@ class Game {
     this.last_overworld_pos = { x: cx, y: cy };
     this.wild_pokemon = null;
     this.inTrainerBattle = false;
+    this.battleSwitchMode = false;
+    this.battleForcedSwitch = false;
     this.captureHideWild = false;
     this.captureWildScale = 1;
     this.pokeballOverlay = null;
@@ -1028,7 +1034,18 @@ class Game {
       this.drawXpBar(50, 415, active.current_xp, active.xp_to_level, 150);
       this.drawText(`XP ${active.current_xp}/${active.xp_to_level}`, 205, 423, COLORS.BLACK, 16);
 
-      if (active.moves.length) {
+      if (this.battleSwitchMode) {
+        this.drawRect(30, 438, 740, 150, "rgba(255,255,255,0.92)", COLORS.BLACK, 2);
+        this.drawText("Switch Pokemon (1-6)", 50, 465, COLORS.BLACK, 24);
+        this.player.pokemon_team.forEach((pokemon, i) => {
+          const status = pokemon.isAlive() ? `HP ${pokemon.current_hp}/${pokemon.max_hp}` : "Fainted";
+          const color = pokemon.isAlive() ? COLORS.BLACK : COLORS.GRAY;
+          this.drawText(`${i + 1} - ${pokemon.name} (${status})`, 50 + (i % 2) * 360, 495 + Math.floor(i / 2) * 28, color, 19);
+        });
+        if (!this.battleForcedSwitch) {
+          this.drawText("ESC/Q - Cancel", 580, 578, COLORS.BLACK, 18);
+        }
+      } else if (active.moves.length) {
         let y = 450;
         this.drawText("Choose a move:", 50, y, COLORS.BLACK, 22);
         y += 30;
@@ -1042,9 +1059,11 @@ class Game {
         y = 450 + moveCount * 25 + 30;
         if (this.inTrainerBattle) {
           this.drawText("Trainer battle: no catch / no run", 50, y, COLORS.BLACK, 20);
+          this.drawText("S - Switch Pokemon", 50, y + 25, COLORS.BLACK, 20);
         } else {
           this.drawText(`5/C - Catch (Pokeballs: ${this.player.pokeballs})`, 50, y, COLORS.BLACK, 20);
           this.drawText("6/R - Run", 50, y + 25, COLORS.BLACK, 20);
+          this.drawText("S - Switch Pokemon", 50, y + 50, COLORS.BLACK, 20);
         }
       }
     }
@@ -1273,6 +1292,8 @@ class Game {
 
     this.wild_pokemon = new Pokemon(pokemonName, level, this.spriteCache);
     this.inTrainerBattle = false;
+    this.battleSwitchMode = false;
+    this.battleForcedSwitch = false;
     this.state = "BATTLE";
     this.showMessage(`Wild ${pokemonName} appeared!`, 120);
   }
@@ -1285,8 +1306,122 @@ class Game {
     const trainerLevel = Math.max(8, Math.min(45, active.level + 2));
     this.wild_pokemon = new Pokemon("Floatzel", trainerLevel, this.spriteCache);
     this.inTrainerBattle = true;
+    this.battleSwitchMode = false;
+    this.battleForcedSwitch = false;
     this.state = "BATTLE";
     this.showMessage("Trainer Luca challenges you!", 140);
+  }
+
+  getActivePokemonIndex() {
+    for (let i = 0; i < this.player.pokemon_team.length; i += 1) {
+      if (this.player.pokemon_team[i].isAlive()) return i;
+    }
+    return -1;
+  }
+
+  hasAvailableSwitchTarget() {
+    const activeIndex = this.getActivePokemonIndex();
+    return this.player.pokemon_team.some((pokemon, i) => i !== activeIndex && pokemon.isAlive());
+  }
+
+  openBattleSwitchMenu(forced = false) {
+    if (!this.hasAvailableSwitchTarget()) {
+      this.showMessage("No other Pokemon can battle!", 120);
+      return false;
+    }
+
+    this.battleSwitchMode = true;
+    this.battleForcedSwitch = forced;
+    this.showMessage(forced ? "Choose your next Pokemon (1-6)!" : "Switch Pokemon: press 1-6", 140);
+    return true;
+  }
+
+  closeBattleSwitchMenu() {
+    this.battleSwitchMode = false;
+    this.battleForcedSwitch = false;
+  }
+
+  async enemyBattleTurn() {
+    const active = this.player.getActivePokemon();
+    if (!active || !this.wild_pokemon || !this.wild_pokemon.isAlive()) return;
+
+    if (this.wild_pokemon.moves.length) {
+      const wildMove = this.wild_pokemon.moves[randInt(0, this.wild_pokemon.moves.length - 1)];
+      const wildMoveData = MOVES[wildMove] || {};
+
+      if (Math.random() * 100 > (wildMoveData.accuracy ?? 100)) {
+        this.showMessage(`${this.inTrainerBattle ? "Trainer's" : "Wild"} ${this.wild_pokemon.name}'s ${wildMove} missed!`, 120);
+      } else {
+        const power = wildMoveData.power ?? 0;
+        if (power > 0) {
+          const typeMult = getTypeEffectiveness(wildMoveData.type || "Normal", active.type);
+          const stab = this.wild_pokemon.type.includes(wildMoveData.type || "Normal") ? 1.5 : 1.0;
+          const baseDamage = ((2 * this.wild_pokemon.level / 5 + 2) * power * this.wild_pokemon.attack / active.defense / 50 + 2);
+          let damage = Math.floor(baseDamage * stab * typeMult);
+          damage += randInt(-10, 10);
+          damage = Math.max(1, damage);
+          active.takeDamage(damage);
+          this.showMessage(`${this.inTrainerBattle ? "Trainer's" : "Wild"} ${this.wild_pokemon.name} used ${wildMove}! ${damage} damage!`, 120);
+        } else {
+          this.showMessage(`${this.inTrainerBattle ? "Trainer's" : "Wild"} ${this.wild_pokemon.name} used ${wildMove}!`, 120);
+        }
+      }
+    } else {
+      const damage = Math.max(1, (this.wild_pokemon.attack - Math.floor(active.defense / 2)) + randInt(-5, 5));
+      active.takeDamage(damage);
+      this.showMessage(`${this.inTrainerBattle ? "Trainer's" : "Wild"} ${this.wild_pokemon.name} dealt ${damage} damage!`, 120);
+    }
+
+    await sleep(1000);
+
+    if (!active.isAlive()) {
+      this.showMessage(`${active.name} fainted!`, 120);
+      await sleep(1200);
+
+      if (!this.player.getActivePokemon()) {
+        this.sendToNearestPokecenter();
+        return;
+      }
+
+      this.openBattleSwitchMenu(true);
+    }
+  }
+
+  async switchBattlePokemon(targetIndex) {
+    const team = this.player.pokemon_team;
+    const activeIndex = this.getActivePokemonIndex();
+    if (activeIndex < 0) return;
+    if (targetIndex < 0 || targetIndex >= team.length) {
+      this.showMessage("Invalid Pokemon slot!", 120);
+      return;
+    }
+
+    const target = team[targetIndex];
+    if (!target || !target.isAlive()) {
+      this.showMessage("That Pokemon cannot battle!", 120);
+      return;
+    }
+
+    const forced = this.battleForcedSwitch;
+
+    if (targetIndex !== activeIndex) {
+      [team[activeIndex], team[targetIndex]] = [team[targetIndex], team[activeIndex]];
+      this.showMessage(`Go, ${team[activeIndex].name}!`, 120);
+      await sleep(900);
+    } else if (forced) {
+      this.showMessage(`${target.name} is ready to continue!`, 120);
+      await sleep(700);
+    } else {
+      this.showMessage(`${target.name} is already battling!`, 100);
+      return;
+    }
+
+    this.closeBattleSwitchMenu();
+
+    // Manual switches consume your turn. Forced switches after faint do not.
+    if (!forced) {
+      await this.enemyBattleTurn();
+    }
   }
 
   async battleAttack(moveIndex) {
@@ -1359,44 +1494,7 @@ class Game {
       return;
     }
 
-    if (this.wild_pokemon.moves.length) {
-      const wildMove = this.wild_pokemon.moves[randInt(0, this.wild_pokemon.moves.length - 1)];
-      const wildMoveData = MOVES[wildMove] || {};
-
-      if (Math.random() * 100 > (wildMoveData.accuracy ?? 100)) {
-        this.showMessage(`${this.inTrainerBattle ? "Trainer's" : "Wild"} ${this.wild_pokemon.name}'s ${wildMove} missed!`, 120);
-      } else {
-        const power = wildMoveData.power ?? 0;
-        if (power > 0) {
-          const typeMult = getTypeEffectiveness(wildMoveData.type || "Normal", active.type);
-          const stab = this.wild_pokemon.type.includes(wildMoveData.type || "Normal") ? 1.5 : 1.0;
-          const baseDamage = ((2 * this.wild_pokemon.level / 5 + 2) * power * this.wild_pokemon.attack / active.defense / 50 + 2);
-          let damage = Math.floor(baseDamage * stab * typeMult);
-          damage += randInt(-10, 10);
-          damage = Math.max(1, damage);
-          active.takeDamage(damage);
-          this.showMessage(`${this.inTrainerBattle ? "Trainer's" : "Wild"} ${this.wild_pokemon.name} used ${wildMove}! ${damage} damage!`, 120);
-        } else {
-          this.showMessage(`${this.inTrainerBattle ? "Trainer's" : "Wild"} ${this.wild_pokemon.name} used ${wildMove}!`, 120);
-        }
-      }
-    } else {
-      const damage = Math.max(1, (this.wild_pokemon.attack - Math.floor(active.defense / 2)) + randInt(-5, 5));
-      active.takeDamage(damage);
-      this.showMessage(`${this.inTrainerBattle ? "Trainer's" : "Wild"} ${this.wild_pokemon.name} dealt ${damage} damage!`, 120);
-    }
-
-    await sleep(1000);
-
-    if (!active.isAlive()) {
-      this.showMessage(`${active.name} fainted!`, 120);
-      await sleep(1500);
-      if (!this.player.getActivePokemon()) {
-        this.sendToNearestPokecenter();
-      } else {
-        this.state = "EXPLORE";
-      }
-    }
+    await this.enemyBattleTurn();
   }
 
   async animatePokeballThrow() {
@@ -1563,22 +1661,14 @@ class Game {
       this.captureHideWild = false;
       this.captureWildScale = 1;
       this.pokeballOverlay = null;
+      this.closeBattleSwitchMenu();
     } else {
       this.captureHideWild = false;
       this.captureWildScale = 1;
       this.pokeballOverlay = null;
       this.showMessage(`${this.wild_pokemon.name} broke free!`, 120);
       await sleep(1000);
-      const active = this.player.getActivePokemon();
-      if (active && this.wild_pokemon.isAlive()) {
-        const damage = Math.max(1, (this.wild_pokemon.attack - Math.floor(active.defense / 2)) + randInt(-5, 5));
-        active.takeDamage(damage);
-        this.showMessage(`Wild ${this.wild_pokemon.name} dealt ${damage} damage!`, 120);
-        if (!this.player.getActivePokemon()) {
-          await sleep(1000);
-          this.sendToNearestPokecenter();
-        }
-      }
+      await this.enemyBattleTurn();
     }
   }
 
@@ -1592,20 +1682,12 @@ class Game {
     if (Math.random() < 0.7) {
       this.showMessage("Got away safely!", 120);
       await sleep(1000);
+      this.closeBattleSwitchMenu();
       this.state = "EXPLORE";
     } else {
       this.showMessage("Can't escape!", 120);
       await sleep(1000);
-      const active = this.player.getActivePokemon();
-      if (active) {
-        const damage = Math.max(1, (this.wild_pokemon.attack - Math.floor(active.defense / 2)) + randInt(-5, 5));
-        active.takeDamage(damage);
-        this.showMessage(`Wild ${this.wild_pokemon.name} dealt ${damage} damage!`, 120);
-        if (!this.player.getActivePokemon()) {
-          await sleep(1000);
-          this.sendToNearestPokecenter();
-        }
-      }
+      await this.enemyBattleTurn();
     }
   }
 
@@ -1614,12 +1696,25 @@ class Game {
     this.inputLocked = true;
 
     try {
+      const lower = key.toLowerCase();
+
+      if (this.battleSwitchMode) {
+        if (key >= "1" && key <= "6") {
+          await this.switchBattlePokemon(Number(key) - 1);
+        } else if (!this.battleForcedSwitch && (key === "Escape" || lower === "q")) {
+          this.closeBattleSwitchMenu();
+          this.showMessage("Switch cancelled.", 80);
+        }
+        return;
+      }
+
       if (key === "1") await this.battleAttack(0);
       else if (key === "2") await this.battleAttack(1);
       else if (key === "3") await this.battleAttack(2);
       else if (key === "4") await this.battleAttack(3);
-      else if (key.toLowerCase() === "c" || key === "5") await this.tryCatch();
-      else if (key.toLowerCase() === "r" || key === "6") await this.runFromBattle();
+      else if (lower === "c" || key === "5") await this.tryCatch();
+      else if (lower === "r" || key === "6") await this.runFromBattle();
+      else if (lower === "s") this.openBattleSwitchMenu(false);
     } finally {
       this.inputLocked = false;
     }
