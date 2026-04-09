@@ -738,7 +738,8 @@ class Game {
   startScreen() {
     const bg = this.titleScreenSprite;
     if (bg) {
-      const scale = Math.max(SCREEN_WIDTH / bg.width, SCREEN_HEIGHT / bg.height);
+      this.drawRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, COLORS.BLACK);
+      const scale = Math.min(SCREEN_WIDTH / bg.width, SCREEN_HEIGHT / bg.height);
       const drawW = bg.width * scale;
       const drawH = bg.height * scale;
       const drawX = (SCREEN_WIDTH - drawW) / 2;
