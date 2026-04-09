@@ -408,7 +408,7 @@ class Game {
     this.inTrainerBattle = false;
     this.titleReady = false;
     this.titlePulse = 0;
-    this.titleScreenImageName = "Pokemon quartz startscreen.png";
+    this.titleScreenImageName = "Pokemon quartz title screen.png";
     this.beachTrainerPos = { x: 13, y: 7 };
     this.beachPierY = 7;
 
