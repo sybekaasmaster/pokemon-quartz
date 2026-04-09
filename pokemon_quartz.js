@@ -683,7 +683,7 @@ class Game {
         for (let x = 0; x < this.map_width; x += 1) {
           if (x === this.player.x && y === this.player.y) continue;
           terrain[y][x] = x < splitX ? "water" : "sand";
-          if (y === pierY && x >= 0 && x <= 14) terrain[y][x] = "pier";
+          if (y === pierY && x >= 0 && x <= 13) terrain[y][x] = "pier";
           if (x >= 15 && y >= 2 && y <= 12 && Math.random() < 0.22) terrain[y][x] = "tree";
         }
       }
@@ -853,6 +853,7 @@ class Game {
             this.ctx.arc(px + 20, py + 8, 7, 0, Math.PI * 2);
             this.ctx.fill();
           } else if (this.currentBiome === "SNOW") {
+            this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(236,244,250)", "rgb(208,224,236)");
             this.drawRect(px + 17, py + 14, 6, 14, "rgb(110,84,52)", "rgb(75,58,36)", 1);
             this.ctx.beginPath();
             this.ctx.fillStyle = "rgb(36,110,62)";
