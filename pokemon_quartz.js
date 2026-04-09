@@ -224,13 +224,13 @@ function getTypeEffectiveness(attackerType, defenderType) {
     const types = defenderType.split("/").map((t) => t.trim());
     let multiplier = 1.0;
     for (const t of types) {
-      if (effectiveness.strong_against.includes(t)) multiplier *= 1.5;
+      if (effectiveness.strong_against.includes(t)) multiplier *= 2.0;
       else if (effectiveness.weak_to.includes(t)) multiplier *= 0.5;
     }
     return multiplier;
   }
 
-  if (effectiveness.strong_against.includes(defenderType)) return 1.5;
+  if (effectiveness.strong_against.includes(defenderType)) return 2.0;
   if (effectiveness.weak_to.includes(defenderType)) return 0.5;
   return 1.0;
 }
@@ -1367,6 +1367,23 @@ class Game {
     this.battleForcedSwitch = false;
   }
 
+  calculateBattleDamage(attacker, defender, moveName) {
+    const moveData = MOVES[moveName] || {};
+    const power = moveData.power ?? 0;
+    if (power <= 0) {
+      return { damage: 0, typeMult: 1.0, stab: 1.0, moveType: moveData.type || "Normal" };
+    }
+
+    const moveType = moveData.type || "Normal";
+    const typeMult = getTypeEffectiveness(moveType, defender.type);
+    const stab = attacker.type.includes(moveType) ? 1.5 : 1.0;
+    const baseDamage = (((2 * attacker.level) / 5 + 2) * power * attacker.attack) / Math.max(1, defender.defense) / 50 + 2;
+    const modifiedDamage = baseDamage * stab * typeMult;
+    const damage = Math.max(1, Math.round(modifiedDamage) + randInt(-2, 2));
+
+    return { damage, typeMult, stab, moveType };
+  }
+
   async enemyBattleTurn() {
     const active = this.player.getActivePokemon();
     if (!active || !this.wild_pokemon || !this.wild_pokemon.isAlive()) return;
@@ -1378,16 +1395,14 @@ class Game {
       if (Math.random() * 100 > (wildMoveData.accuracy ?? 100)) {
         this.showMessage(`${this.inTrainerBattle ? "Trainer's" : "Wild"} ${this.wild_pokemon.name}'s ${wildMove} missed!`, 120);
       } else {
-        const power = wildMoveData.power ?? 0;
-        if (power > 0) {
-          const typeMult = getTypeEffectiveness(wildMoveData.type || "Normal", active.type);
-          const stab = this.wild_pokemon.type.includes(wildMoveData.type || "Normal") ? 1.5 : 1.0;
-          const baseDamage = ((2 * this.wild_pokemon.level / 5 + 2) * power * this.wild_pokemon.attack / active.defense / 50 + 2);
-          let damage = Math.floor(baseDamage * stab * typeMult);
-          damage += randInt(-10, 10);
-          damage = Math.max(1, damage);
-          active.takeDamage(damage);
-          this.showMessage(`${this.inTrainerBattle ? "Trainer's" : "Wild"} ${this.wild_pokemon.name} used ${wildMove}! ${damage} damage!`, 120);
+        const result = this.calculateBattleDamage(this.wild_pokemon, active, wildMove);
+        if (result.damage > 0) {
+          active.takeDamage(result.damage);
+          if (result.typeMult >= 3.5) this.showMessage(`It's devastatingly effective! ${result.damage} damage!`, 120);
+          else if (result.typeMult >= 1.5) this.showMessage(`It's super effective! ${result.damage} damage!`, 120);
+          else if (result.typeMult <= 0.3) this.showMessage(`It's barely effective... ${result.damage} damage!`, 120);
+          else if (result.typeMult < 1.0) this.showMessage(`It's not very effective... ${result.damage} damage!`, 120);
+          else this.showMessage(`${this.inTrainerBattle ? "Trainer's" : "Wild"} ${this.wild_pokemon.name} used ${wildMove}! ${result.damage} damage!`, 120);
         } else {
           this.showMessage(`${this.inTrainerBattle ? "Trainer's" : "Wild"} ${this.wild_pokemon.name} used ${wildMove}!`, 120);
         }
@@ -1464,20 +1479,15 @@ class Game {
       this.showMessage(`${moveName} missed!`, 120);
       await sleep(1000);
     } else {
-      const power = moveData.power ?? 0;
-      if (power > 0) {
-        const typeMult = getTypeEffectiveness(moveData.type || "Normal", this.wild_pokemon.type);
-        const stab = active.type.includes(moveData.type || "Normal") ? 1.5 : 1.0;
-        const baseDamage = ((2 * active.level / 5 + 2) * power * active.attack / this.wild_pokemon.defense / 50 + 2);
-        let damage = Math.floor(baseDamage * stab * typeMult);
-        damage += randInt(-10, 10);
-        damage = Math.max(1, damage);
+      const result = this.calculateBattleDamage(active, this.wild_pokemon, moveName);
+      if (result.damage > 0) {
+        this.wild_pokemon.takeDamage(result.damage);
 
-        this.wild_pokemon.takeDamage(damage);
-
-        if (typeMult > 1.0) this.showMessage(`${moveName} was super effective! ${damage} damage!`, 120);
-        else if (typeMult < 1.0) this.showMessage(`It's not very effective... ${damage} damage!`, 120);
-        else this.showMessage(`${active.name} used ${moveName}! ${damage} damage!`, 120);
+        if (result.typeMult >= 3.5) this.showMessage(`It's devastatingly effective! ${result.damage} damage!`, 120);
+        else if (result.typeMult >= 1.5) this.showMessage(`It's super effective! ${result.damage} damage!`, 120);
+        else if (result.typeMult <= 0.3) this.showMessage(`It's barely effective... ${result.damage} damage!`, 120);
+        else if (result.typeMult < 1.0) this.showMessage(`It's not very effective... ${result.damage} damage!`, 120);
+        else this.showMessage(`${active.name} used ${moveName}! ${result.damage} damage!`, 120);
       } else {
         this.showMessage(`${active.name} used ${moveName}!`, 120);
       }
