@@ -669,10 +669,6 @@ class Game {
       for (let y = 0; y < this.map_height; y += 1) {
         for (let x = 0; x < this.map_width; x += 1) {
           if (x === this.player.x && y === this.player.y) continue;
-          if (Math.random() < 0.06) {
-            terrain[y][x] = "tree";
-            continue;
-          }
           if (Math.random() < 0.08) terrain[y][x] = "rock";
         }
       }
@@ -854,23 +850,39 @@ class Game {
             this.ctx.fill();
           } else if (this.currentBiome === "SNOW") {
             this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(236,244,250)", "rgb(208,224,236)");
-            this.drawRect(px + 17, py + 14, 6, 14, "rgb(110,84,52)", "rgb(75,58,36)", 1);
+            // Tree trunk
+            this.drawRect(px + 16, py + 18, 8, 18, "rgb(110,84,52)", "rgb(75,58,36)", 1);
+            // Large bottom triangle
             this.ctx.beginPath();
-            this.ctx.fillStyle = "rgb(36,110,62)";
-            this.ctx.moveTo(px + 20, py + 4);
-            this.ctx.lineTo(px + 12, py + 14);
-            this.ctx.lineTo(px + 28, py + 14);
+            this.ctx.fillStyle = "rgb(20,90,50)";
+            this.ctx.moveTo(px + 20, py + 6);
+            this.ctx.lineTo(px + 8, py + 18);
+            this.ctx.lineTo(px + 32, py + 18);
             this.ctx.closePath();
             this.ctx.fill();
+            this.ctx.strokeStyle = "rgb(10,60,30)";
+            this.ctx.lineWidth = 1;
+            this.ctx.stroke();
+            // Medium middle triangle
             this.ctx.beginPath();
-            this.ctx.moveTo(px + 20, py + 9);
-            this.ctx.lineTo(px + 10, py + 20);
-            this.ctx.lineTo(px + 30, py + 20);
+            this.ctx.fillStyle = "rgb(25,105,55)";
+            this.ctx.moveTo(px + 20, py + 14);
+            this.ctx.lineTo(px + 10, py + 24);
+            this.ctx.lineTo(px + 30, py + 24);
             this.ctx.closePath();
             this.ctx.fill();
+            this.ctx.stroke();
+            // Snow on top
             this.ctx.fillStyle = "rgb(245,250,255)";
             this.ctx.beginPath();
-            this.ctx.arc(px + 20, py + 8, 4, 0, Math.PI * 2);
+            this.ctx.arc(px + 20, py + 5, 4, 0, Math.PI * 2);
+            this.ctx.fill();
+            // Snow accents on branches
+            this.ctx.beginPath();
+            this.ctx.arc(px + 10, py + 18, 2.5, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.beginPath();
+            this.ctx.arc(px + 30, py + 18, 2.5, 0, Math.PI * 2);
             this.ctx.fill();
           }
         } else if (tile === "rock") {
