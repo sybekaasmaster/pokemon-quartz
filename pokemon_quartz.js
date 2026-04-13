@@ -437,6 +437,8 @@ class Game {
     this.last_overworld_pos = { x: 5, y: 5 };
     this.prev_state = "EXPLORE";
     this.inventory_selected = 0;
+    this.inventory_tab = 0;
+    this.inventory_loadsave_selected = 0;
     this.inputLocked = false;
     this.captureHideWild = false;
     this.captureWildScale = 1;
@@ -1344,28 +1346,70 @@ class Game {
 
   drawInventory() {
     this.drawRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, COLORS.DARK_GREEN);
-    this.drawText("Team Inventory", SCREEN_WIDTH / 2, 40, COLORS.WHITE, 42, "center");
+    this.drawText("Inventory", SCREEN_WIDTH / 2, 40, COLORS.WHITE, 42, "center");
 
-    let y = 100;
-    this.player.pokemon_team.forEach((pokemon, i) => {
-      const selected = i === this.inventory_selected;
-      this.drawRect(50, y, SCREEN_WIDTH - 100, 40, selected ? COLORS.WHITE : COLORS.LIGHT_GRAY, COLORS.BLACK, 2);
-      this.drawText(
-        `${i + 1}. ${pokemon.name} Lv.${pokemon.level} (HP: ${pokemon.current_hp}/${pokemon.max_hp})`,
-        60,
-        y + 26,
-        COLORS.BLACK,
-        20
-      );
-      y += 50;
-    });
+    const tabs = ["Pokemon", "Items", "Badges", "Load/Save"];
+    const tabW = 170;
+    const tabH = 40;
+    const tabGap = 14;
+    const totalW = tabs.length * tabW + (tabs.length - 1) * tabGap;
+    let tabX = Math.floor((SCREEN_WIDTH - totalW) / 2);
 
-    const lines = ["UP/DOWN - Select Pokemon", "W/S - Move Pokemon up/down", "ESC/Q - Exit"];
-    y = SCREEN_HEIGHT - 120;
-    for (const line of lines) {
-      this.drawText(line, 50, y, COLORS.WHITE, 22);
-      y += 30;
+    for (let i = 0; i < tabs.length; i += 1) {
+      const selected = i === this.inventory_tab;
+      this.drawRect(tabX, 70, tabW, tabH, selected ? COLORS.YELLOW : COLORS.LIGHT_GRAY, COLORS.BLACK, 2);
+      this.drawText(tabs[i], tabX + tabW / 2, 97, COLORS.BLACK, 20, "center");
+      tabX += tabW + tabGap;
     }
+
+    if (this.inventory_tab === 0) {
+      let y = 140;
+      this.player.pokemon_team.forEach((pokemon, i) => {
+        const selected = i === this.inventory_selected;
+        this.drawRect(50, y, SCREEN_WIDTH - 100, 40, selected ? COLORS.WHITE : COLORS.LIGHT_GRAY, COLORS.BLACK, 2);
+        this.drawText(
+          `${i + 1}. ${pokemon.name} Lv.${pokemon.level} (HP: ${pokemon.current_hp}/${pokemon.max_hp})`,
+          60,
+          y + 26,
+          COLORS.BLACK,
+          20
+        );
+        y += 50;
+      });
+      this.drawText("UP/DOWN - Select | W/S - Move", 50, SCREEN_HEIGHT - 70, COLORS.WHITE, 22);
+    } else if (this.inventory_tab === 1) {
+      const rodText = this.hasFishingRod ? "Fishing Rod: Yes" : "Fishing Rod: No";
+      this.drawRect(80, 150, 640, 240, COLORS.LIGHT_GRAY, COLORS.BLACK, 2);
+      this.drawText(`Pokeballs: ${this.player.pokeballs}`, 110, 210, COLORS.BLACK, 30);
+      this.drawText(rodText, 110, 255, COLORS.BLACK, 30);
+      this.drawText("Items are used automatically where relevant.", 110, 320, COLORS.BLACK, 22);
+    } else if (this.inventory_tab === 2) {
+      const badgeRows = [
+        `Grassland Badge: ${this.badges.GRASSLAND ? "Earned" : "Missing"}`,
+        `Desert Badge: ${this.badges.DESERT ? "Earned" : "Missing"}`,
+        `Beach Badge: ${this.badges.BEACH ? "Earned" : "Missing"}`,
+        `Snow Badge: ${this.badges.SNOW ? "Earned" : "Missing"}`
+      ];
+      this.drawRect(80, 140, 640, 300, COLORS.LIGHT_GRAY, COLORS.BLACK, 2);
+      let y = 195;
+      for (const line of badgeRows) {
+        this.drawText(line, 110, y, COLORS.BLACK, 28);
+        y += 48;
+      }
+      const allBadges = this.hasAllBadges() ? "All badges unlocked: CLOUDS gate open" : "Need 4 badges for CLOUDS";
+      this.drawText(allBadges, 110, 395, COLORS.BLACK, 22);
+    } else if (this.inventory_tab === 3) {
+      const opts = ["Save Game", "Load Game"];
+      this.drawRect(180, 170, 440, 220, COLORS.LIGHT_GRAY, COLORS.BLACK, 2);
+      for (let i = 0; i < opts.length; i += 1) {
+        const selected = i === this.inventory_loadsave_selected;
+        this.drawRect(220, 210 + i * 70, 360, 48, selected ? COLORS.WHITE : "rgb(220,220,220)", COLORS.BLACK, 2);
+        this.drawText(opts[i], 400, 242 + i * 70, COLORS.BLACK, 28, "center");
+      }
+      this.drawText("UP/DOWN + ENTER", 400, 360, COLORS.BLACK, 20, "center");
+    }
+
+    this.drawText("LEFT/RIGHT - Tabs | ESC/Q - Exit", 50, SCREEN_HEIGHT - 35, COLORS.WHITE, 20);
   }
 
   movePokemon(direction) {
@@ -2147,7 +2191,9 @@ class Game {
         } else if (event.key === "Tab") {
           this.prev_state = this.state;
           this.state = "INVENTORY";
+          this.inventory_tab = 0;
           this.inventory_selected = 0;
+          this.inventory_loadsave_selected = 0;
         }
         return;
       }
@@ -2159,7 +2205,9 @@ class Game {
         } else if (event.key === "Tab") {
           this.prev_state = this.state;
           this.state = "INVENTORY";
+          this.inventory_tab = 0;
           this.inventory_selected = 0;
+          this.inventory_loadsave_selected = 0;
         } else if (event.key === "Escape" || event.key.toLowerCase() === "q") {
           const cx = this.pokecenter_pos.x;
           const cy = this.pokecenter_pos.y;
@@ -2177,15 +2225,28 @@ class Game {
       }
 
       if (this.state === "INVENTORY") {
-        if (event.key === "ArrowUp") this.inventory_selected = Math.max(0, this.inventory_selected - 1);
-        else if (event.key === "ArrowDown") {
+        if (event.key === "ArrowLeft") {
+          this.inventory_tab = (this.inventory_tab + 3) % 4;
+        } else if (event.key === "ArrowRight") {
+          this.inventory_tab = (this.inventory_tab + 1) % 4;
+        } else if (this.inventory_tab === 0 && event.key === "ArrowUp") {
+          this.inventory_selected = Math.max(0, this.inventory_selected - 1);
+        } else if (this.inventory_tab === 0 && event.key === "ArrowDown") {
           this.inventory_selected = Math.min(this.player.pokemon_team.length - 1, this.inventory_selected + 1);
-        } else if (event.key.toLowerCase() === "w") this.movePokemon(-1);
-        else if (event.key.toLowerCase() === "s") this.movePokemon(1);
-        else if (event.ctrlKey && event.key.toLowerCase() === "s") {
-          event.preventDefault();
-          this.saveGame();
-        } else if (event.key === "Escape" || event.key.toLowerCase() === "q") this.state = this.prev_state;
+        } else if (this.inventory_tab === 0 && event.key.toLowerCase() === "w") {
+          this.movePokemon(-1);
+        } else if (this.inventory_tab === 0 && event.key.toLowerCase() === "s") {
+          this.movePokemon(1);
+        } else if (this.inventory_tab === 3 && event.key === "ArrowUp") {
+          this.inventory_loadsave_selected = Math.max(0, this.inventory_loadsave_selected - 1);
+        } else if (this.inventory_tab === 3 && event.key === "ArrowDown") {
+          this.inventory_loadsave_selected = Math.min(1, this.inventory_loadsave_selected + 1);
+        } else if (this.inventory_tab === 3 && (event.key === "Enter" || event.key === " ")) {
+          if (this.inventory_loadsave_selected === 0) this.saveGame();
+          else this.loadGame();
+        } else if (event.key === "Escape" || event.key.toLowerCase() === "q") {
+          this.state = this.prev_state;
+        }
         return;
       }
 
@@ -2201,7 +2262,6 @@ class Game {
     } else if (this.state === "EXPLORE") {
       this.drawRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, COLORS.BLACK);
       this.drawMap();
-      this.drawUi();
     } else if (this.state === "BATTLE") {
       this.drawBattle();
     } else if (this.state === "CENTER") {
