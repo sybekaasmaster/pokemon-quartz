@@ -2,6 +2,11 @@ const SCREEN_WIDTH = 800;
 const SCREEN_HEIGHT = 600;
 const TILE_SIZE = 40;
 const FPS = 60;
+const POTION_HEAL_AMOUNT = 40;
+const SHOP_PRICES = {
+  POKEBALL: 200,
+  POTION: 300
+};
 
 const COLORS = {
   WHITE: "rgb(255,255,255)",
@@ -365,6 +370,8 @@ class Player {
     this.y = y;
     this.pokemon_team = [];
     this.pokeballs = 5;
+    this.potions = 2;
+    this.pokedollars = 500;
     this.spriteCache = spriteCache;
   }
 
@@ -437,11 +444,13 @@ class Game {
     this.message = "";
     this.message_timer = 0;
     this.pokecenter_pos = { x: 0, y: 0 };
+    this.pokemart_pos = { x: 2, y: 0 };
     this.last_overworld_pos = { x: 5, y: 5 };
     this.prev_state = "EXPLORE";
     this.inventory_selected = 0;
     this.inventory_tab = 0;
     this.inventory_loadsave_selected = 0;
+    this.mart_selected = 0;
     this.lastSaveStatus = "No save yet";
     this.cheatBuffer = "";
     this.badgeCheatCode = "badgeup";
@@ -530,6 +539,7 @@ class Game {
       "champion.png",
       "pokeball.png",
       "Pokecenter.png",
+      "pokemart.png",
       this.titleScreenImageName,
       ...Object.keys(GEN4_POKEMON).map((name) => `${name.toLowerCase()}.png`)
     ];
@@ -561,6 +571,10 @@ class Game {
 
   get pokecenterSprite() {
     return this.spriteCache["Pokecenter.png"] || null;
+  }
+
+  get pokemartSprite() {
+    return this.spriteCache["pokemart.png"] || null;
   }
 
   getTrainerSprite(biome = this.currentBiome) {
@@ -610,6 +624,8 @@ class Game {
       playerX: this.player.x,
       playerY: this.player.y,
       pokeballs: this.player.pokeballs,
+      potions: this.player.potions,
+      pokedollars: this.player.pokedollars,
       team: this.player.pokemon_team.map((p) => ({
         name: p.name,
         level: p.level,
@@ -649,6 +665,8 @@ class Game {
       this.player.x = data.playerX;
       this.player.y = data.playerY;
       this.player.pokeballs = data.pokeballs;
+      this.player.potions = Number.isFinite(data.potions) ? data.potions : 2;
+      this.player.pokedollars = Number.isFinite(data.pokedollars) ? data.pokedollars : 500;
       this.last_overworld_pos = data.lastOverworldPos;
       this.currentBiome = data.currentBiome || "GRASSLAND";
       // Backward compatibility: older saves used hasBoat.
@@ -784,10 +802,19 @@ class Game {
       if (cy + 1 < this.map_height) terrain[cy + 1][cx] = "center";
       if (cy + 1 < this.map_height && cx + 1 < this.map_width) terrain[cy + 1][cx + 1] = "center";
 
+      const mx = Math.min(this.map_width - 2, cx + 2);
+      const my = cy;
+      this.pokemart_pos = { x: mx, y: my };
+      terrain[my][mx] = "mart";
+      if (mx + 1 < this.map_width) terrain[my][mx + 1] = "mart";
+      if (my + 1 < this.map_height) terrain[my + 1][mx] = "mart";
+      if (my + 1 < this.map_height && mx + 1 < this.map_width) terrain[my + 1][mx + 1] = "mart";
+
       for (let y = 0; y < this.map_height; y += 1) {
         for (let x = 0; x < this.map_width; x += 1) {
           if (x === this.player.x && y === this.player.y) continue;
           if (terrain[y][x] === "center") continue;
+          if (terrain[y][x] === "mart") continue;
           if (Math.random() < 0.12) terrain[y][x] = "tree";
         }
       }
@@ -1115,6 +1142,16 @@ class Game {
         } else if (tile === "rock") {
           this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(184,134,11)", "rgb(139,69,19)");
           this.drawRect(px + 4, py + 4, 14, 14, "rgb(160,120,100)", "rgb(100,70,50)", 2);
+        } else if (tile === "mart") {
+          const mx = this.pokemart_pos.x;
+          const my = this.pokemart_pos.y;
+          if (x === mx && y === my && this.pokemartSprite) {
+            this.ctx.drawImage(this.pokemartSprite, mx * TILE_SIZE, my * TILE_SIZE, 80, 80);
+          } else if (!this.pokemartSprite) {
+            this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(100,145,210)", "rgb(52,78,132)");
+            this.drawRect(px + 8, py + 8, 24, 16, "rgb(240,248,255)", "rgb(30,60,110)", 1);
+            this.drawRect(px + 14, py + 25, 12, 11, "rgb(220,235,248)", "rgb(50,76,120)", 1);
+          }
         } else if (tile === "center") {
           const cx = this.pokecenter_pos.x;
           const cy = this.pokecenter_pos.y;
@@ -1338,10 +1375,12 @@ class Game {
         if (this.inTrainerBattle) {
           this.drawText("Trainer battle: no catch / no run", 50, y, COLORS.BLACK, 20);
           this.drawText("S - Switch Pokemon", 50, y + 25, COLORS.BLACK, 20);
+          this.drawText(`7/P - Potion (${this.player.potions})`, 50, y + 50, COLORS.BLACK, 20);
         } else {
           this.drawText(`5/C - Catch (Pokeballs: ${this.player.pokeballs})`, 50, y, COLORS.BLACK, 20);
           this.drawText("6/R - Run", 50, y + 25, COLORS.BLACK, 20);
           this.drawText("S - Switch Pokemon", 50, y + 50, COLORS.BLACK, 20);
+          this.drawText(`7/P - Potion (${this.player.potions})`, 50, y + 75, COLORS.BLACK, 20);
         }
       }
     }
@@ -1402,6 +1441,61 @@ class Game {
     }
   }
 
+  drawPokemart() {
+    this.drawRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, "rgb(42,88,140)");
+    this.drawRect(0, 0, SCREEN_WIDTH, 150, "rgb(82,135,196)");
+    this.drawText("PokeMart", SCREEN_WIDTH / 2, 48, COLORS.WHITE, 44, "center");
+    this.drawText(`Money: $${this.player.pokedollars}`, SCREEN_WIDTH / 2, 95, COLORS.WHITE, 26, "center");
+
+    const options = [
+      `Pokeball (+1) - $${SHOP_PRICES.POKEBALL}`,
+      `Potion (+1, heals ${POTION_HEAL_AMOUNT}) - $${SHOP_PRICES.POTION}`,
+      "Leave"
+    ];
+
+    this.drawRect(140, 190, 520, 280, "rgb(230,240,250)", COLORS.BLACK, 2);
+    for (let i = 0; i < options.length; i += 1) {
+      const selected = i === this.mart_selected;
+      this.drawRect(180, 235 + i * 70, 440, 48, selected ? COLORS.WHITE : "rgb(210,225,240)", COLORS.BLACK, 2);
+      this.drawText(options[i], 400, 265 + i * 70, COLORS.BLACK, 22, "center");
+    }
+
+    this.drawText("UP/DOWN + ENTER | ESC/Q leave", SCREEN_WIDTH / 2, 530, COLORS.WHITE, 20, "center");
+
+    if (this.message_timer > 0) {
+      this.drawRect(200, 555, 400, 35, COLORS.WHITE, COLORS.BLACK, 2);
+      this.drawText(this.message, SCREEN_WIDTH / 2, 578, COLORS.BLACK, 20, "center");
+      this.message_timer -= 1;
+    }
+  }
+
+  buySelectedMartItem() {
+    if (this.mart_selected === 0) {
+      if (this.player.pokedollars < SHOP_PRICES.POKEBALL) {
+        this.showMessage("Not enough Pokedollars.", 100);
+        return;
+      }
+      this.player.pokedollars -= SHOP_PRICES.POKEBALL;
+      this.player.pokeballs += 1;
+      this.showMessage("Bought 1 Pokeball.", 100);
+      return;
+    }
+
+    if (this.mart_selected === 1) {
+      if (this.player.pokedollars < SHOP_PRICES.POTION) {
+        this.showMessage("Not enough Pokedollars.", 100);
+        return;
+      }
+      this.player.pokedollars -= SHOP_PRICES.POTION;
+      this.player.potions += 1;
+      this.showMessage("Bought 1 Potion.", 100);
+      return;
+    }
+
+    this.state = "EXPLORE";
+    this.showMessage("Come again!", 90);
+  }
+
   drawInventory() {
     this.drawRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, COLORS.DARK_GREEN);
     this.drawText("Inventory", SCREEN_WIDTH / 2, 40, COLORS.WHITE, 42, "center");
@@ -1438,9 +1532,11 @@ class Game {
     } else if (this.inventory_tab === 1) {
       const rodText = this.hasFishingRod ? "Fishing Rod: Yes" : "Fishing Rod: No";
       this.drawRect(80, 150, 640, 240, COLORS.LIGHT_GRAY, COLORS.BLACK, 2);
-      this.drawText(`Pokeballs: ${this.player.pokeballs}`, 110, 210, COLORS.BLACK, 30);
-      this.drawText(rodText, 110, 255, COLORS.BLACK, 30);
-      this.drawText("Items are used automatically where relevant.", 110, 320, COLORS.BLACK, 22);
+      this.drawText(`Pokedollars: $${this.player.pokedollars}`, 110, 175, COLORS.BLACK, 28);
+      this.drawText(`Pokeballs: ${this.player.pokeballs}`, 110, 220, COLORS.BLACK, 30);
+      this.drawText(`Potions: ${this.player.potions}`, 110, 265, COLORS.BLACK, 30);
+      this.drawText(rodText, 110, 308, COLORS.BLACK, 25);
+      this.drawText(`Potion heals ${POTION_HEAL_AMOUNT} HP in battle and costs a turn.`, 110, 350, COLORS.BLACK, 20);
     } else if (this.inventory_tab === 2) {
       const badgeRows = [
         `Grassland Badge: ${this.badges.GRASSLAND ? "Earned" : "Missing"}`,
@@ -1570,6 +1666,15 @@ class Game {
         this.last_overworld_pos = { x: newX, y: newY };
         this.state = "CENTER";
         this.showMessage("Welcome!", 120);
+        return;
+      }
+
+      if (this.terrain[this.player.y][this.player.x] === "mart") {
+        this.playerBiomePos[this.currentBiome] = { x: newX, y: newY };
+        this.last_overworld_pos = { x: newX, y: newY };
+        this.mart_selected = 0;
+        this.state = "MART";
+        this.showMessage("Welcome to the PokeMart!", 120);
         return;
       }
 
@@ -1976,7 +2081,9 @@ class Game {
 
     if (!this.wild_pokemon.isAlive()) {
       const xpGain = this.wild_pokemon.level * 10;
-      this.showMessage(`${this.inTrainerBattle ? "Trainer's" : "Wild"} ${this.wild_pokemon.name} fainted! +${xpGain} XP`, 120);
+      const moneyGain = this.inTrainerBattle ? this.wild_pokemon.level * 18 : this.wild_pokemon.level * 7;
+      this.player.pokedollars += moneyGain;
+      this.showMessage(`${this.inTrainerBattle ? "Trainer's" : "Wild"} ${this.wild_pokemon.name} fainted! +${xpGain} XP +$${moneyGain}`, 140);
       await sleep(1000);
 
       const levelResult = active.gainXp(xpGain);
@@ -2032,6 +2139,27 @@ class Game {
       return;
     }
 
+    await this.enemyBattleTurn();
+  }
+
+  async usePotionInBattle() {
+    const active = this.player.getActivePokemon();
+    if (!active) return;
+
+    if (this.player.potions <= 0) {
+      this.showMessage("No Potions left!", 120);
+      return;
+    }
+
+    if (active.current_hp >= active.max_hp) {
+      this.showMessage(`${active.name} is already at full HP.`, 120);
+      return;
+    }
+
+    this.player.potions -= 1;
+    active.current_hp = Math.min(active.max_hp, active.current_hp + POTION_HEAL_AMOUNT);
+    this.showMessage(`Used Potion! ${active.name} recovered ${POTION_HEAL_AMOUNT} HP.`, 130);
+    await sleep(900);
     await this.enemyBattleTurn();
   }
 
@@ -2252,6 +2380,7 @@ class Game {
       else if (key === "4") await this.battleAttack(3);
       else if (lower === "c" || key === "5") await this.tryCatch();
       else if (lower === "r" || key === "6") await this.runFromBattle();
+      else if (lower === "p" || key === "7") await this.usePotionInBattle();
       else if (lower === "s") this.openBattleSwitchMenu(false);
     } finally {
       this.inputLocked = false;
@@ -2334,6 +2463,17 @@ class Game {
         return;
       }
 
+      if (this.state === "MART") {
+        if (event.key === "ArrowUp") this.mart_selected = Math.max(0, this.mart_selected - 1);
+        else if (event.key === "ArrowDown") this.mart_selected = Math.min(2, this.mart_selected + 1);
+        else if (event.key === "Enter" || event.key === " ") this.buySelectedMartItem();
+        else if (event.key === "Escape" || event.key.toLowerCase() === "q") {
+          this.state = "EXPLORE";
+          this.showMessage("Left the PokeMart.", 80);
+        }
+        return;
+      }
+
       if (this.state === "INVENTORY") {
         if (event.key === "ArrowLeft") {
           this.inventory_tab = (this.inventory_tab + 3) % 4;
@@ -2376,6 +2516,8 @@ class Game {
       this.drawBattle();
     } else if (this.state === "CENTER") {
       this.drawPokecenter();
+    } else if (this.state === "MART") {
+      this.drawPokemart();
     } else if (this.state === "INVENTORY") {
       this.drawInventory();
     }
