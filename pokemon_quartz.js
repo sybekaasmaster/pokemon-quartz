@@ -440,6 +440,8 @@ class Game {
     this.inventory_tab = 0;
     this.inventory_loadsave_selected = 0;
     this.lastSaveStatus = "No save yet";
+    this.cheatBuffer = "";
+    this.badgeCheatCode = "badgeup";
     this.inputLocked = false;
     this.captureHideWild = false;
     this.captureWildScale = 1;
@@ -1548,6 +1550,28 @@ class Game {
     return this.badges.GRASSLAND && this.badges.DESERT && this.badges.BEACH && this.badges.SNOW;
   }
 
+  unlockAllBadgesCheat() {
+    this.badges = { GRASSLAND: true, DESERT: true, BEACH: true, SNOW: true };
+    this.showMessage("Cheat activated: all badges unlocked!", 180);
+  }
+
+  handleCheatInput(event) {
+    if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === "b") {
+      this.unlockAllBadgesCheat();
+      return true;
+    }
+
+    if (event.key.length === 1 && /[a-z]/i.test(event.key)) {
+      this.cheatBuffer = (this.cheatBuffer + event.key.toLowerCase()).slice(-this.badgeCheatCode.length);
+      if (this.cheatBuffer === this.badgeCheatCode) {
+        this.cheatBuffer = "";
+        this.unlockAllBadgesCheat();
+        return true;
+      }
+    }
+    return false;
+  }
+
   getTrainerPosition(biome) {
     if (biome === "BEACH") return this.beachTrainerPos;
     return this.trainerPos[biome] || null;
@@ -2164,6 +2188,11 @@ class Game {
   bindKeys() {
     window.addEventListener("keydown", async (event) => {
       if (event.key === "Tab") event.preventDefault();
+
+      if (this.handleCheatInput(event)) {
+        event.preventDefault();
+        return;
+      }
 
       if (this.state === "START") {
         if (event.key === "Enter" || event.key === " ") {
