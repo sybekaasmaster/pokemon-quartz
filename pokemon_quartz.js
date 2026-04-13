@@ -419,14 +419,24 @@ class Game {
     this.pokeballOverlay = null;
     this.hasFishingRod = false;
     this.beachTrainerDefeated = false;
+    this.badges = { GRASSLAND: false, DESERT: false, BEACH: false, SNOW: false };
     this.inTrainerBattle = false;
     this.battleSwitchMode = false;
     this.battleForcedSwitch = false;
+    this.trainerBattle = null;
     this.titleReady = false;
     this.titlePulse = 0;
     this.titleScreenImageName = "Pokemon quartz title screen.png";
     this.beachTrainerPos = { x: 13, y: 7 };
     this.beachPierY = 7;
+    this.trainerPos = {
+      GRASSLAND: { x: 15, y: 3 },
+      DESERT: { x: 10, y: 10 },
+      BEACH: { x: 13, y: 7 },
+      SNOW: { x: 12, y: 5 }
+    };
+    this.championDefeated = false;
+    this.legendariesEncountered = new Set();
 
     this.map_width = 20;
     this.map_height = 15;
@@ -436,13 +446,15 @@ class Game {
       GRASSLAND: [],
       DESERT: [],
       BEACH: [],
-      SNOW: []
+      SNOW: [],
+      CLOUDS: []
     };
     this.playerBiomePos = {
       GRASSLAND: { x: 5, y: 5 },
       DESERT: { x: 5, y: 0 },
       BEACH: { x: 19, y: 7 },
-      SNOW: { x: 19, y: 7 }
+      SNOW: { x: 19, y: 7 },
+      CLOUDS: { x: 10, y: 7 }
     };
     this.generateAllMaps();
 
@@ -646,6 +658,7 @@ class Game {
     this.biomeMap.DESERT = this.generateMapForBiome("DESERT");
     this.biomeMap.BEACH = this.generateMapForBiome("BEACH");
     this.biomeMap.SNOW = this.generateMapForBiome("SNOW");
+    this.biomeMap.CLOUDS = this.generateMapForBiome("CLOUDS");
     this.terrain = this.biomeMap.GRASSLAND;
   }
 
@@ -662,6 +675,8 @@ class Game {
           row.push(x < this.map_width / 2 ? "water" : "sand");
         } else if (biome === "SNOW") {
           row.push(Math.random() < 0.22 ? "ice" : "snow");
+        } else if (biome === "CLOUDS") {
+          row.push(Math.random() < 0.3 ? "cloud" : "sky");
         }
       }
       terrain.push(row);
@@ -725,13 +740,14 @@ class Game {
     const dockY = Math.max(1, Math.min(this.map_height - 2, this.beachPierY));
     this.beachTrainerPos = { x: dockX, y: dockY };
 
-    // Keep one classic straight pier lane and add random branches from it.
-    for (let x = 0; x <= dockX; x += 1) {
+    // Straight pier from deep water into sand for good connection
+    const pierStartX = Math.max(0, splitX - 8);
+    for (let x = pierStartX; x <= dockX; x += 1) {
       terrain[dockY][x] = "pier";
     }
 
     const maxPierTiles = Math.max(24, Math.floor(this.map_width * this.map_height * 0.16));
-    let carvedTiles = dockX + 1;
+    let carvedTiles = dockX - pierStartX + 1;
     const walkers = [
       { x: Math.max(1, splitX - 2), y: dockY, dx: 0, dy: -1, life: 0 },
       { x: Math.max(1, splitX - 4), y: dockY, dx: 0, dy: 1, life: 0 }
