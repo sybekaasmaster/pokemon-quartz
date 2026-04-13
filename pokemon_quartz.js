@@ -850,8 +850,8 @@ class Game {
     const dockY = Math.max(1, Math.min(this.map_height - 2, this.beachPierY));
     this.beachTrainerPos = { x: dockX, y: dockY };
 
-    // Straight pier from deep water into sand for good connection
-    const pierStartX = Math.max(0, splitX - 8);
+    // Guaranteed full crossing lane so BEACH always connects to SNOW side.
+    const pierStartX = 0;
     for (let x = pierStartX; x <= dockX; x += 1) {
       terrain[dockY][x] = "pier";
     }
