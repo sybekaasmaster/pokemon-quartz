@@ -348,7 +348,21 @@ class Player {
     return this.spriteCache["pokemon bsdp character.png"] || null;
   }
 
-  getSprite(biome = "GRASSLAND") {
+  getBridgeSprite() {
+    return this.spriteCache["pokemon bdsp character bridge.png"]
+      || this.spriteCache["pokemon bsdp character bridge.png"]
+      || null;
+  }
+
+  getSprite(biome = "GRASSLAND", tile = null) {
+    if (biome === "BEACH" && tile === "pier") {
+      return this.getBridgeSprite()
+        || this.spriteCache["pokemon bsdp character beach.png"]
+        || this.spriteCache["pokemon bsdp character desert.png"]
+        || this.spriteCache["pokemon bsdp character.png"]
+        || null;
+    }
+
     if (biome === "DESERT") {
       return this.spriteCache["pokemon bsdp character desert.png"] || this.spriteCache["pokemon bsdp character.png"] || null;
     }
@@ -457,6 +471,8 @@ class Game {
       "pokemon bsdp character desert.png",
       "pokemon bsdp character beach.png",
       "pokemon bsdp character snow.png",
+      "pokemon bdsp character bridge.png",
+      "pokemon bsdp character bridge.png",
       "pokemon trainer beach.jpg",
       "pokeball.png",
       "Pokecenter.png",
@@ -988,7 +1004,8 @@ class Game {
 
     const playerX = this.player.x * TILE_SIZE;
     const playerY = this.player.y * TILE_SIZE;
-    const playerSprite = this.player.getSprite(this.currentBiome);
+    const playerTile = this.terrain[this.player.y]?.[this.player.x] || null;
+    const playerSprite = this.player.getSprite(this.currentBiome, playerTile);
     if (playerSprite) {
       this.ctx.drawImage(playerSprite, playerX, playerY, TILE_SIZE, TILE_SIZE);
     } else {
