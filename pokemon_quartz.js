@@ -725,13 +725,17 @@ class Game {
     const dockY = Math.max(1, Math.min(this.map_height - 2, this.beachPierY));
     this.beachTrainerPos = { x: dockX, y: dockY };
 
-    for (let x = splitX; x <= dockX; x += 1) {
+    // Keep one classic straight pier lane and add random branches from it.
+    for (let x = 0; x <= dockX; x += 1) {
       terrain[dockY][x] = "pier";
     }
 
     const maxPierTiles = Math.max(24, Math.floor(this.map_width * this.map_height * 0.16));
-    let carvedTiles = dockX - splitX + 1;
-    const walkers = [{ x: splitX - 1, y: dockY, dx: -1, dy: 0, life: 0 }];
+    let carvedTiles = dockX + 1;
+    const walkers = [
+      { x: Math.max(1, splitX - 2), y: dockY, dx: 0, dy: -1, life: 0 },
+      { x: Math.max(1, splitX - 4), y: dockY, dx: 0, dy: 1, life: 0 }
+    ];
     const directions = [
       { dx: -1, dy: 0 },
       { dx: 0, dy: -1 },
