@@ -209,13 +209,27 @@ const BIOME_TRAINERS = {
   CLOUDS: { name: "Champion Iris", pokemon: ["Staraptor", "Infernape", "Empoleon", "Garchomp", "Luxray", "Torterra"] }
 };
 
-const LEGENDARY_POKEMON = ["Dialga", "Palkia", "Heatran", "Cresselia"];
+const LEGENDARY_POKEMON = [
+  "Articuno", "Zapdos", "Moltres", "Mewtwo", "Raikou", "Entei", "Suicune", "Lugia", "Ho-Oh",
+  "Regirock", "Regice", "Registeel", "Latias", "Latios", "Kyogre", "Groudon", "Rayquaza",
+  "Uxie", "Mesprit", "Azelf", "Dialga", "Palkia", "Heatran", "Regigigas", "Giratina", "Cresselia",
+  "Cobalion", "Terrakion", "Virizion", "Tornadus", "Thundurus", "Reshiram", "Zekrom", "Landorus", "Kyurem",
+  "Xerneas", "Yveltal", "Zygarde", "Type: Null", "Silvally", "Tapu Koko", "Tapu Lele", "Tapu Bulu", "Tapu Fini",
+  "Cosmog", "Cosmoem", "Solgaleo", "Lunala", "Nihilego", "Buzzwole", "Pheromosa", "Xurkitree", "Celesteela",
+  "Kartana", "Guzzlord", "Necrozma", "Magearna", "Zacian", "Zamazenta", "Eternatus", "Kubfu", "Urshifu", "Zarude",
+  "Regieleki", "Regidrago", "Glastrier", "Spectrier", "Calyrex", "Enamorus", "Wo-Chien", "Chien-Pao", "Ting-Lu",
+  "Chi-Yu", "Koraidon", "Miraidon", "Walking Wake", "Iron Leaves", "Okidogi", "Munkidori", "Fezandipiti", "Ogerpon",
+  "Gouging Fire", "Raging Bolt", "Iron Boulder", "Iron Crown", "Terapagos", "Pecharunt", "Mew", "Celebi", "Jirachi",
+  "Deoxys", "Phione", "Manaphy", "Darkrai", "Shaymin", "Arceus", "Victini", "Keldeo", "Meloetta", "Genesect",
+  "Diancie", "Hoopa", "Volcanion", "Marshadow", "Zeraora", "Meltan", "Melmetal"
+];
 
 const BIOME_COLORS = {
   GRASSLAND: { bg: COLORS.DARK_GREEN, accent: COLORS.GREEN },
   DESERT: { bg: "rgb(139,69,19)", accent: "rgb(184,134,11)" },
   BEACH: { bg: "rgb(235,215,150)", accent: "rgb(70,145,190)" },
-  SNOW: { bg: "rgb(225,238,248)", accent: "rgb(170,205,235)" }
+  SNOW: { bg: "rgb(225,238,248)", accent: "rgb(170,205,235)" },
+  CLOUDS: { bg: "rgb(191,222,247)", accent: "rgb(245,250,255)" }
 };
 
 function randInt(min, max) {
@@ -249,7 +263,7 @@ class Pokemon {
   constructor(name, level = 5, spriteCache) {
     this.name = name;
     this.level = level;
-    const data = GEN4_POKEMON[name];
+    const data = GEN4_POKEMON[name] || { type: "Legendary", hp: 100, attack: 110, defense: 100, speed: 100 };
     this.type = data.type;
     this.max_hp = data.hp + level * 2;
     this.current_hp = this.max_hp;
@@ -258,7 +272,7 @@ class Pokemon {
     this.speed = data.speed + level;
     this.current_xp = 0;
     this.xp_to_level = 100;
-    this.moves = POKEMON_MOVES[name] ? [...POKEMON_MOVES[name]] : [];
+    this.moves = POKEMON_MOVES[name] ? [...POKEMON_MOVES[name]] : ["Tackle", "Stone Edge", "Thunderbolt", "Ice Beam"];
     this.spriteCache = spriteCache;
   }
 
@@ -302,7 +316,7 @@ class Pokemon {
 
       this.level += 1;
 
-      const data = GEN4_POKEMON[this.name];
+      const data = GEN4_POKEMON[this.name] || { type: this.type, hp: 100, attack: 110, defense: 100, speed: 100 };
       this.max_hp = data.hp + this.level * 2;
       this.current_hp = this.max_hp;
       this.attack = data.attack + this.level;
@@ -334,14 +348,14 @@ class Pokemon {
 
   evolve(newName) {
     this.name = newName;
-    const data = GEN4_POKEMON[newName];
+    const data = GEN4_POKEMON[newName] || { type: this.type, hp: 100, attack: 110, defense: 100, speed: 100 };
     this.type = data.type;
     this.max_hp = data.hp + this.level * 2;
     this.current_hp = this.max_hp;
     this.attack = data.attack + this.level;
     this.defense = data.defense + this.level;
     this.speed = data.speed + this.level;
-    this.moves = POKEMON_MOVES[newName] ? [...POKEMON_MOVES[newName]] : [];
+    this.moves = POKEMON_MOVES[newName] ? [...POKEMON_MOVES[newName]] : ["Tackle", "Stone Edge", "Thunderbolt", "Ice Beam"];
   }
 }
 
@@ -428,16 +442,14 @@ class Game {
     this.captureWildScale = 1;
     this.pokeballOverlay = null;
     this.hasFishingRod = false;
-    this.beachTrainerDefeated = false;
     this.badges = { GRASSLAND: false, DESERT: false, BEACH: false, SNOW: false };
+    this.defeatedTrainers = { GRASSLAND: false, DESERT: false, BEACH: false, SNOW: false, CLOUDS: false };
     this.inTrainerBattle = false;
-      this.badges = { GRASSLAND: false, DESERT: false, BEACH: false, SNOW: false };
-      this.deafeatedTrainers = { GRASSLAND: false, DESERT: false, BEACH: false, SNOW: false };
-      this.championDefeated = false;
-      this.legendariesEncountered = new Set();
     this.battleSwitchMode = false;
     this.battleForcedSwitch = false;
     this.trainerBattle = null;
+    this.trainerQueue = [];
+    this.currentSpecialEncounter = null;
     this.titleReady = false;
     this.titlePulse = 0;
     this.titleScreenImageName = "Pokemon quartz title screen.png";
@@ -447,7 +459,8 @@ class Game {
       GRASSLAND: { x: 15, y: 3 },
       DESERT: { x: 10, y: 10 },
       BEACH: { x: 13, y: 7 },
-      SNOW: { x: 12, y: 5 }
+      SNOW: { x: 12, y: 5 },
+      CLOUDS: { x: 10, y: 5 }
     };
     this.championDefeated = false;
     this.legendariesEncountered = new Set();
@@ -480,7 +493,8 @@ class Game {
       GRASSLAND: { x: Math.floor(this.map_width / 2), y: Math.floor(this.map_height / 2) },
       DESERT: { x: 5, y: 0 },
       BEACH: { x: 19, y: 7 },
-      SNOW: { x: 19, y: 7 }
+      SNOW: { x: 19, y: 7 },
+      CLOUDS: { x: 10, y: 7 }
     };
   }
 
@@ -569,7 +583,10 @@ class Game {
       currentBiome: this.currentBiome,
       playerBiomePos: this.playerBiomePos,
       hasFishingRod: this.hasFishingRod,
-      beachTrainerDefeated: this.beachTrainerDefeated
+      badges: this.badges,
+      defeatedTrainers: this.defeatedTrainers,
+      championDefeated: this.championDefeated,
+      legendariesEncountered: Array.from(this.legendariesEncountered)
     };
     localStorage.setItem("pokemonSave", JSON.stringify(saveData));
     this.showMessage("Game saved!", 120);
@@ -591,7 +608,17 @@ class Game {
       this.currentBiome = data.currentBiome || "GRASSLAND";
       // Backward compatibility: older saves used hasBoat.
       this.hasFishingRod = Boolean(data.hasFishingRod || data.hasBoat);
-      this.beachTrainerDefeated = Boolean(data.beachTrainerDefeated);
+      this.badges = { GRASSLAND: false, DESERT: false, BEACH: false, SNOW: false, ...(data.badges || {}) };
+      this.defeatedTrainers = {
+        GRASSLAND: false,
+        DESERT: false,
+        BEACH: Boolean(data.beachTrainerDefeated),
+        SNOW: false,
+        CLOUDS: false,
+        ...(data.defeatedTrainers || {})
+      };
+      this.championDefeated = Boolean(data.championDefeated);
+      this.legendariesEncountered = new Set(data.legendariesEncountered || []);
       const defaultPos = this.getDefaultBiomePositions();
       this.playerBiomePos = {
         ...defaultPos,
@@ -628,8 +655,14 @@ class Game {
     this.playerBiomePos = defaultPos;
     this.currentBiome = "GRASSLAND";
     this.steps = 0;
+    this.badges = { GRASSLAND: false, DESERT: false, BEACH: false, SNOW: false };
+    this.defeatedTrainers = { GRASSLAND: false, DESERT: false, BEACH: false, SNOW: false, CLOUDS: false };
+    this.championDefeated = false;
+    this.legendariesEncountered = new Set();
+    this.currentSpecialEncounter = null;
+    this.trainerBattle = null;
+    this.trainerQueue = [];
     this.hasFishingRod = false;
-    this.beachTrainerDefeated = false;
     this.inTrainerBattle = false;
     this.battleSwitchMode = false;
     this.battleForcedSwitch = false;
@@ -737,6 +770,21 @@ class Game {
           if (Math.random() < 0.12) terrain[y][x] = "ice";
         }
       }
+    } else if (biome === "CLOUDS") {
+      for (let y = 0; y < this.map_height; y += 1) {
+        for (let x = 0; x < this.map_width; x += 1) {
+          if (Math.random() < 0.08) terrain[y][x] = "cloud";
+        }
+      }
+    }
+
+    const trainerPos = this.getTrainerPosition(biome);
+    if (trainerPos) {
+      if (biome === "BEACH") terrain[trainerPos.y][trainerPos.x] = "pier";
+      else if (biome === "DESERT") terrain[trainerPos.y][trainerPos.x] = "path";
+      else if (biome === "SNOW") terrain[trainerPos.y][trainerPos.x] = "snow";
+      else if (biome === "CLOUDS") terrain[trainerPos.y][trainerPos.x] = "cloud";
+      else terrain[trainerPos.y][trainerPos.x] = "path";
     }
 
     return terrain;
@@ -745,6 +793,7 @@ class Game {
   getEncounterTilesForBiome(biome) {
     if (biome === "BEACH") return ["water"];
     if (biome === "SNOW") return ["snow", "ice"];
+    if (biome === "CLOUDS") return this.championDefeated ? ["cloud"] : [];
     return ["grass"];
   }
 
@@ -928,6 +977,16 @@ class Game {
           this.drawRect(px + 4, py + 18, TILE_SIZE - 8, 4, "rgb(130,92,54)");
         } else if (tile === "snow") {
           this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(242,248,252)", "rgb(208,224,236)");
+        } else if (tile === "sky") {
+          this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(175,215,247)", "rgb(145,190,232)");
+        } else if (tile === "cloud") {
+          this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(198,228,250)", "rgb(160,202,230)");
+          this.ctx.fillStyle = "rgba(255,255,255,0.85)";
+          this.ctx.beginPath();
+          this.ctx.arc(px + 12, py + 18, 7, 0, Math.PI * 2);
+          this.ctx.arc(px + 20, py + 14, 8, 0, Math.PI * 2);
+          this.ctx.arc(px + 28, py + 18, 6, 0, Math.PI * 2);
+          this.ctx.fill();
         } else if (tile === "ice") {
           this.drawRect(px, py, TILE_SIZE, TILE_SIZE, "rgb(189,229,248)", "rgb(120,178,210)");
           this.drawRect(px + 6, py + 6, 12, 12, "rgba(255,255,255,0.35)");
@@ -1025,9 +1084,10 @@ class Game {
       }
     }
 
-    if (this.currentBiome === "BEACH" && !this.beachTrainerDefeated) {
-      const tx = this.beachTrainerPos.x * TILE_SIZE;
-      const ty = this.beachTrainerPos.y * TILE_SIZE;
+    const trainerPos = this.getTrainerPosition(this.currentBiome);
+    if (trainerPos && !this.hasDefeatedTrainer(this.currentBiome)) {
+      const tx = trainerPos.x * TILE_SIZE;
+      const ty = trainerPos.y * TILE_SIZE;
       const sprite = this.trainerSprite;
       if (sprite) {
         this.ctx.drawImage(sprite, tx, ty, TILE_SIZE, TILE_SIZE);
@@ -1120,6 +1180,9 @@ class Game {
     const active = this.player.getActivePokemon();
     this.drawRect(0, 0, SCREEN_WIDTH, 84, "rgba(0,0,0,0.55)");
     this.drawText(`Team: ${this.player.pokemon_team.length}/6 | Pokeballs: ${this.player.pokeballs}`, 10, 24);
+    const badgeCount = Object.values(this.badges).filter(Boolean).length;
+    const championLabel = this.championDefeated ? "Champion: Defeated" : "Champion: Waiting";
+    this.drawText(`Badges: ${badgeCount}/4 | ${championLabel}`, 420, 24, COLORS.WHITE, 18);
 
     if (active) {
       this.drawText(`${active.name} Lv.${active.level} | HP: ${active.current_hp}/${active.max_hp}`, 10, 48);
@@ -1352,10 +1415,24 @@ class Game {
         this.steps += 1;
         return;
       }
+      if (this.currentBiome === "CLOUDS") {
+        this.switchBiome("GRASSLAND", Math.floor(this.map_width / 2), 0, "You descended from the clouds!");
+        this.steps += 1;
+        return;
+      }
     } else if (newY < 0) {
       if (this.currentBiome === "DESERT") {
         this.switchBiome("GRASSLAND", this.playerBiomePos.GRASSLAND.x, this.map_height - 1, "You left the desert!");
         this.steps += 1;
+        return;
+      }
+      if (this.currentBiome === "GRASSLAND") {
+        if (this.hasAllBadges()) {
+          this.switchBiome("CLOUDS", this.playerBiomePos.CLOUDS.x, this.map_height - 1, "You rose to the clouds!");
+          this.steps += 1;
+        } else {
+          this.showMessage("Collect all 4 badges to enter the clouds.", 120);
+        }
         return;
       }
     }
@@ -1379,13 +1456,7 @@ class Game {
       this.player.y = newY;
       this.steps += 1;
 
-      if (
-        this.currentBiome === "BEACH"
-        && !this.beachTrainerDefeated
-        && this.player.x === this.beachTrainerPos.x
-        && this.player.y === this.beachTrainerPos.y
-      ) {
-        this.startBeachTrainerBattle();
+      if (this.tryStartBiomeTrainerBattleAtPlayer()) {
         return;
       }
 
@@ -1421,9 +1492,98 @@ class Game {
     return minLevel;
   }
 
+  hasAllBadges() {
+    return this.badges.GRASSLAND && this.badges.DESERT && this.badges.BEACH && this.badges.SNOW;
+  }
+
+  getTrainerPosition(biome) {
+    if (biome === "BEACH") return this.beachTrainerPos;
+    return this.trainerPos[biome] || null;
+  }
+
+  hasDefeatedTrainer(biome) {
+    return Boolean(this.defeatedTrainers[biome]);
+  }
+
+  getRemainingSpecialPokemon() {
+    return LEGENDARY_POKEMON.filter((name) => !this.legendariesEncountered.has(name));
+  }
+
+  startSpecialEncounter() {
+    const active = this.player.getActivePokemon();
+    if (!active) return false;
+
+    const remaining = this.getRemainingSpecialPokemon();
+    if (!remaining.length) {
+      this.showMessage("All legendary and mythical Pokemon have appeared already.", 140);
+      return false;
+    }
+
+    const pick = remaining[randInt(0, remaining.length - 1)];
+    this.legendariesEncountered.add(pick);
+    this.currentSpecialEncounter = pick;
+
+    const level = Math.max(55, Math.min(95, active.level + randInt(8, 16)));
+    this.wild_pokemon = new Pokemon(pick, level, this.spriteCache);
+    this.inTrainerBattle = false;
+    this.trainerBattle = null;
+    this.trainerQueue = [];
+    this.battleSwitchMode = false;
+    this.battleForcedSwitch = false;
+    this.state = "BATTLE";
+    this.showMessage(`A legendary ${pick} appeared!`, 180);
+    return true;
+  }
+
+  startBiomeTrainerBattle(biome) {
+    if (this.hasDefeatedTrainer(biome)) return false;
+    const active = this.player.getActivePokemon();
+    if (!active) return false;
+
+    const trainerData = BIOME_TRAINERS[biome];
+    if (!trainerData) return false;
+
+    const teamNames = trainerData.pokemon.filter((name) => Boolean(GEN4_POKEMON[name]));
+    if (!teamNames.length) return false;
+
+    const baseLevel = Math.max(8, Math.min(75, active.level + 2));
+    this.trainerQueue = teamNames.map((name, i) => new Pokemon(name, Math.min(90, baseLevel + i * 2), this.spriteCache));
+    this.trainerBattle = {
+      biome,
+      name: trainerData.name,
+      isChampion: biome === "CLOUDS"
+    };
+
+    this.wild_pokemon = this.trainerQueue.shift();
+    this.inTrainerBattle = true;
+    this.battleSwitchMode = false;
+    this.battleForcedSwitch = false;
+    this.state = "BATTLE";
+    this.showMessage(`${trainerData.name} challenges you!`, 160);
+    return true;
+  }
+
+  tryStartBiomeTrainerBattleAtPlayer() {
+    const biome = this.currentBiome;
+    const pos = this.getTrainerPosition(biome);
+    if (!pos) return false;
+    if (this.hasDefeatedTrainer(biome)) return false;
+    if (this.player.x !== pos.x || this.player.y !== pos.y) return false;
+    return this.startBiomeTrainerBattle(biome);
+  }
+
   startWildEncounter() {
     const active = this.player.getActivePokemon();
     if (!active) return;
+
+    if (this.currentBiome === "CLOUDS") {
+      if (!this.championDefeated) {
+        this.showMessage("Defeat the Champion to disturb legendary Pokemon.", 120);
+        return;
+      }
+      this.startSpecialEncounter();
+      return;
+    }
 
     this.captureHideWild = false;
     this.captureWildScale = 1;
@@ -1460,20 +1620,6 @@ class Game {
     this.showMessage(`Wild ${pokemonName} appeared!`, 120);
   }
 
-  startBeachTrainerBattle() {
-    if (this.beachTrainerDefeated) return;
-    const active = this.player.getActivePokemon();
-    if (!active) return;
-
-    const trainerLevel = Math.max(8, Math.min(45, active.level + 2));
-    this.wild_pokemon = new Pokemon("Floatzel", trainerLevel, this.spriteCache);
-    this.inTrainerBattle = true;
-    this.battleSwitchMode = false;
-    this.battleForcedSwitch = false;
-    this.state = "BATTLE";
-    this.showMessage("Trainer Luca challenges you!", 140);
-  }
-
   startFishingEncounter() {
     const active = this.player.getActivePokemon();
     if (!active) return;
@@ -1504,7 +1650,7 @@ class Game {
       return;
     }
 
-    if (!this.hasFishingRod) {
+    if (!this.hasFishingRod || !this.hasDefeatedTrainer("BEACH")) {
       this.showMessage("Je hebt nog geen vishengel. Versla de strandtrainer!", 120);
       return;
     }
@@ -1698,15 +1844,38 @@ class Game {
       }
 
       if (this.inTrainerBattle) {
-        this.beachTrainerDefeated = true;
-        if (!this.hasFishingRod) {
-          this.hasFishingRod = true;
-          this.showMessage("You won! Trainer Luca gave you a Fishing Rod. Press F on a pier to fish!", 220);
-          await sleep(1400);
-        } else {
-          this.showMessage("You defeated Trainer Luca!", 140);
-          await sleep(1000);
+        if (this.trainerQueue.length > 0) {
+          const nextEnemy = this.trainerQueue.shift();
+          this.wild_pokemon = nextEnemy;
+          this.showMessage(`${this.trainerBattle?.name || "Trainer"} sends out ${nextEnemy.name}!`, 160);
+          await sleep(1100);
+          return;
         }
+
+        const biome = this.trainerBattle?.biome;
+        if (biome) {
+          this.defeatedTrainers[biome] = true;
+
+          if (biome === "BEACH") {
+            if (!this.hasFishingRod) {
+              this.hasFishingRod = true;
+              this.showMessage("You won! Trainer Luca gave you a Fishing Rod. Press F on a pier to fish!", 220);
+              await sleep(1400);
+            }
+            this.badges.BEACH = true;
+          } else if (biome === "CLOUDS") {
+            this.championDefeated = true;
+            this.showMessage("Champion defeated! Legendary and mythical encounters are now roaming the clouds.", 220);
+            await sleep(1400);
+          } else {
+            this.badges[biome] = true;
+            this.showMessage(`Badge earned: ${biome} badge!`, 170);
+            await sleep(1200);
+          }
+        }
+
+        this.trainerBattle = null;
+        this.trainerQueue = [];
         this.inTrainerBattle = false;
       }
 
@@ -2032,6 +2201,7 @@ class Game {
     } else if (this.state === "EXPLORE") {
       this.drawRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, COLORS.BLACK);
       this.drawMap();
+      this.drawUi();
     } else if (this.state === "BATTLE") {
       this.drawBattle();
     } else if (this.state === "CENTER") {
