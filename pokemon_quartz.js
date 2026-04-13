@@ -1654,8 +1654,30 @@ class Game {
     const teamNames = trainerData.pokemon.filter((name) => Boolean(GEN4_POKEMON[name]));
     if (!teamNames.length) return false;
 
-    const baseLevel = Math.max(8, Math.min(75, active.level + 2));
-    this.trainerQueue = teamNames.map((name, i) => new Pokemon(name, Math.min(90, baseLevel + i * 2), this.spriteCache));
+    const levelFloorByBiome = {
+      GRASSLAND: 28,
+      DESERT: 42,
+      BEACH: 52,
+      SNOW: 64,
+      CLOUDS: 82
+    };
+    const levelCapByBiome = {
+      GRASSLAND: 60,
+      DESERT: 72,
+      BEACH: 82,
+      SNOW: 90,
+      CLOUDS: 98
+    };
+
+    const floor = levelFloorByBiome[biome] ?? 35;
+    const cap = levelCapByBiome[biome] ?? 90;
+    const scaleBonus = biome === "CLOUDS" ? 16 : 10;
+    const baseLevel = Math.max(floor, Math.min(cap, active.level + scaleBonus));
+
+    this.trainerQueue = teamNames.map((name, i) => {
+      const level = Math.min(cap, baseLevel + i * 3);
+      return new Pokemon(name, level, this.spriteCache);
+    });
     this.trainerBattle = {
       biome,
       name: trainerData.name,
