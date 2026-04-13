@@ -396,6 +396,9 @@ class Player {
     if (biome === "SNOW") {
       return this.spriteCache["pokemon bsdp character snow.png"] || this.spriteCache["pokemon bsdp character grass.png"] || this.spriteCache["pokemon bsdp character.png"] || null;
     }
+    if (biome === "CLOUDS") {
+      return this.spriteCache["pokemon bsdp character clouds.png"] || this.spriteCache["pokemon bsdp character snow.png"] || this.spriteCache["pokemon bsdp character.png"] || null;
+    }
     return this.spriteCache["pokemon bsdp character grass.png"] || this.spriteCache["pokemon bsdp character.png"] || null;
   }
 
@@ -516,9 +519,14 @@ class Game {
       "pokemon bsdp character desert.png",
       "pokemon bsdp character beach.png",
       "pokemon bsdp character snow.png",
+      "pokemon bsdp character clouds.png",
       "pokemon bdsp character bridge.png",
       "pokemon bsdp character bridge.png",
       "pokemon trainer beach.jpg",
+      "pokemon trainer grass.png",
+      "pokemon trainer desert.png",
+      "pokemon trainer snow.png",
+      "champion.png",
       "pokeball.png",
       "Pokecenter.png",
       this.titleScreenImageName,
@@ -554,10 +562,34 @@ class Game {
     return this.spriteCache["Pokecenter.png"] || null;
   }
 
-  get trainerSprite() {
+  getTrainerSprite(biome = this.currentBiome) {
+    if (biome === "GRASSLAND") {
+      return this.spriteCache["pokemon trainer grass.png"]
+        || this.spriteCache["pokemon trainer beach.jpg"]
+        || this.spriteCache["pokemon bsdp character grass.png"]
+        || null;
+    }
+    if (biome === "DESERT") {
+      return this.spriteCache["pokemon trainer desert.png"]
+        || this.spriteCache["pokemon trainer beach.jpg"]
+        || this.spriteCache["pokemon bsdp character desert.png"]
+        || null;
+    }
+    if (biome === "SNOW") {
+      return this.spriteCache["pokemon trainer snow.png"]
+        || this.spriteCache["pokemon trainer beach.jpg"]
+        || this.spriteCache["pokemon bsdp character snow.png"]
+        || null;
+    }
+    if (biome === "CLOUDS") {
+      return this.spriteCache["champion.png"]
+        || this.spriteCache["pokemon trainer snow.png"]
+        || this.spriteCache["pokemon trainer beach.jpg"]
+        || null;
+    }
     return this.spriteCache["pokemon trainer beach.jpg"]
-      || this.spriteCache["pokemon bsdp character desert.png"]
-      || this.spriteCache["pokemon bsdp character grass.png"]
+      || this.spriteCache["pokemon bsdp character beach.png"]
+      || this.spriteCache["pokemon bsdp character.png"]
       || null;
   }
 
@@ -1097,7 +1129,7 @@ class Game {
     if (trainerPos && !this.hasDefeatedTrainer(this.currentBiome)) {
       const tx = trainerPos.x * TILE_SIZE;
       const ty = trainerPos.y * TILE_SIZE;
-      const sprite = this.trainerSprite;
+      const sprite = this.getTrainerSprite(this.currentBiome);
       if (sprite) {
         this.ctx.drawImage(sprite, tx, ty, TILE_SIZE, TILE_SIZE);
       } else {
