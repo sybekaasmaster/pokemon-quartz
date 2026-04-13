@@ -795,7 +795,9 @@ class Game {
       for (let y = 0; y < this.map_height; y += 1) {
         for (let x = 0; x < this.map_width; x += 1) {
           if (x === this.player.x && y === this.player.y) continue;
-          if (Math.random() < 0.08) terrain[y][x] = "rock";
+          const roll = Math.random();
+          if (roll < 0.09) terrain[y][x] = "tree";
+          else if (roll < 0.16) terrain[y][x] = "rock";
         }
       }
     } else if (biome === "BEACH") {
