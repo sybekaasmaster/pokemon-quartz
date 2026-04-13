@@ -201,6 +201,16 @@ const BIOME_POKEMON = {
   SNOW: ["Snover", "Abomasnow", "Snorunt", "Froslass", "Sneasel", "Weavile", "Piloswine", "Mamoswine", "Glaceon"]
 };
 
+const BIOME_TRAINERS = {
+  GRASSLAND: { name: "Trainer Rowan", pokemon: ["Staraptor", "Luxray", "Torterra"] },
+  DESERT: { name: "Trainer Cactus", pokemon: ["Rampardos", "Garchomp", "Bastiodon"] },
+  BEACH: { name: "Trainer Luca", pokemon: ["Floatzel", "Lumineon", "Gastrodon"] },
+  SNOW: { name: "Trainer Frost", pokemon: ["Abomasnow", "Weavile", "Mamoswine"] },
+  CLOUDS: { name: "Champion Iris", pokemon: ["Staraptor", "Infernape", "Empoleon", "Garchomp", "Luxray", "Torterra"] }
+};
+
+const LEGENDARY_POKEMON = ["Dialga", "Palkia", "Heatran", "Cresselia"];
+
 const BIOME_COLORS = {
   GRASSLAND: { bg: COLORS.DARK_GREEN, accent: COLORS.GREEN },
   DESERT: { bg: "rgb(139,69,19)", accent: "rgb(184,134,11)" },
@@ -421,6 +431,10 @@ class Game {
     this.beachTrainerDefeated = false;
     this.badges = { GRASSLAND: false, DESERT: false, BEACH: false, SNOW: false };
     this.inTrainerBattle = false;
+      this.badges = { GRASSLAND: false, DESERT: false, BEACH: false, SNOW: false };
+      this.deafeatedTrainers = { GRASSLAND: false, DESERT: false, BEACH: false, SNOW: false };
+      this.championDefeated = false;
+      this.legendariesEncountered = new Set();
     this.battleSwitchMode = false;
     this.battleForcedSwitch = false;
     this.trainerBattle = null;
