@@ -403,7 +403,7 @@ class Game {
     this.captureHideWild = false;
     this.captureWildScale = 1;
     this.pokeballOverlay = null;
-    this.hasBoat = false;
+    this.hasFishingRod = false;
     this.beachTrainerDefeated = false;
     this.inTrainerBattle = false;
     this.battleSwitchMode = false;
@@ -526,7 +526,7 @@ class Game {
       lastOverworldPos: this.last_overworld_pos,
       currentBiome: this.currentBiome,
       playerBiomePos: this.playerBiomePos,
-      hasBoat: this.hasBoat,
+      hasFishingRod: this.hasFishingRod,
       beachTrainerDefeated: this.beachTrainerDefeated
     };
     localStorage.setItem("pokemonSave", JSON.stringify(saveData));
@@ -547,7 +547,8 @@ class Game {
       this.player.pokeballs = data.pokeballs;
       this.last_overworld_pos = data.lastOverworldPos;
       this.currentBiome = data.currentBiome || "GRASSLAND";
-      this.hasBoat = Boolean(data.hasBoat);
+      // Backward compatibility: older saves used hasBoat.
+      this.hasFishingRod = Boolean(data.hasFishingRod || data.hasBoat);
       this.beachTrainerDefeated = Boolean(data.beachTrainerDefeated);
       const defaultPos = this.getDefaultBiomePositions();
       this.playerBiomePos = {
@@ -585,7 +586,7 @@ class Game {
     this.playerBiomePos = defaultPos;
     this.currentBiome = "GRASSLAND";
     this.steps = 0;
-    this.hasBoat = false;
+    this.hasFishingRod = false;
     this.beachTrainerDefeated = false;
     this.inTrainerBattle = false;
     this.battleSwitchMode = false;
@@ -673,16 +674,16 @@ class Game {
         }
       }
     } else if (biome === "BEACH") {
-      const splitX = this.map_width / 2;
-      const pierY = this.beachPierY;
+      const splitX = Math.floor(this.map_width / 2);
       for (let y = 0; y < this.map_height; y += 1) {
         for (let x = 0; x < this.map_width; x += 1) {
           if (x === this.player.x && y === this.player.y) continue;
           terrain[y][x] = x < splitX ? "water" : "sand";
-          if (y === pierY && x >= 0 && x <= 13) terrain[y][x] = "pier";
           if (x >= 15 && y >= 2 && y <= 12 && Math.random() < 0.22) terrain[y][x] = "tree";
         }
       }
+      this.generateBeachPiers(terrain);
+      terrain[this.beachTrainerPos.y][this.beachTrainerPos.x] = "pier";
     } else if (biome === "SNOW") {
       for (let y = 0; y < this.map_height; y += 1) {
         for (let x = 0; x < this.map_width; x += 1) {
@@ -700,6 +701,74 @@ class Game {
     if (biome === "BEACH") return ["water"];
     if (biome === "SNOW") return ["snow", "ice"];
     return ["grass"];
+  }
+
+  generateBeachPiers(terrain) {
+    const splitX = Math.floor(this.map_width / 2);
+    const dockX = Math.min(this.map_width - 1, splitX + 3);
+    const dockY = Math.max(1, Math.min(this.map_height - 2, this.beachPierY));
+    this.beachTrainerPos = { x: dockX, y: dockY };
+
+    for (let x = splitX; x <= dockX; x += 1) {
+      terrain[dockY][x] = "pier";
+    }
+
+    const maxPierTiles = Math.max(24, Math.floor(this.map_width * this.map_height * 0.16));
+    let carvedTiles = dockX - splitX + 1;
+    const walkers = [{ x: splitX - 1, y: dockY, dx: -1, dy: 0, life: 0 }];
+    const directions = [
+      { dx: -1, dy: 0 },
+      { dx: 0, dy: -1 },
+      { dx: 0, dy: 1 },
+      { dx: 1, dy: 0 }
+    ];
+
+    for (let guard = 0; guard < 260 && walkers.length && carvedTiles < maxPierTiles; guard += 1) {
+      for (let i = walkers.length - 1; i >= 0; i -= 1) {
+        const walker = walkers[i];
+        if (Math.random() < 0.3) {
+          const turn = directions[randInt(0, directions.length - 1)];
+          walker.dx = turn.dx;
+          walker.dy = turn.dy;
+        }
+
+        let nextX = walker.x + walker.dx;
+        let nextY = walker.y + walker.dy;
+        let attempts = 0;
+        while (attempts < 4 && (nextX < 0 || nextX >= splitX || nextY < 0 || nextY >= this.map_height)) {
+          const nextDir = directions[randInt(0, directions.length - 1)];
+          walker.dx = nextDir.dx;
+          walker.dy = nextDir.dy;
+          nextX = walker.x + walker.dx;
+          nextY = walker.y + walker.dy;
+          attempts += 1;
+        }
+
+        if (nextX < 0 || nextX >= splitX || nextY < 0 || nextY >= this.map_height) {
+          walkers.splice(i, 1);
+          continue;
+        }
+
+        walker.x = nextX;
+        walker.y = nextY;
+        walker.life += 1;
+
+        if (terrain[nextY][nextX] !== "pier") {
+          terrain[nextY][nextX] = "pier";
+          carvedTiles += 1;
+          if (carvedTiles >= maxPierTiles) break;
+        }
+
+        if (Math.random() < 0.18 && walkers.length < 5) {
+          const branchDir = directions[randInt(0, directions.length - 1)];
+          walkers.push({ x: walker.x, y: walker.y, dx: branchDir.dx, dy: branchDir.dy, life: 0 });
+        }
+
+        if (walker.life > 28 && Math.random() < 0.35) {
+          walkers.splice(i, 1);
+        }
+      }
+    }
   }
 
   switchBiome(nextBiome, entryX, entryY, message) {
@@ -919,10 +988,6 @@ class Game {
 
     const playerX = this.player.x * TILE_SIZE;
     const playerY = this.player.y * TILE_SIZE;
-    if (this.currentBiome === "BEACH" && this.hasBoat && this.terrain[this.player.y][this.player.x] === "water") {
-      this.drawBoat(playerX, playerY);
-    }
-
     const playerSprite = this.player.getSprite(this.currentBiome);
     if (playerSprite) {
       this.ctx.drawImage(playerSprite, playerX, playerY, TILE_SIZE, TILE_SIZE);
@@ -1247,8 +1312,15 @@ class Game {
     // Normal movement
     if (newX >= 0 && newX < this.map_width && newY >= 0 && newY < this.map_height) {
       const tile = this.terrain[newY][newX];
-      if (tile === "tree" || tile === "rock" || (tile === "water" && !this.hasBoat)) {
-        this.showMessage(tile === "tree" ? "Boom in de weg!" : tile === "water" ? "Water in de weg! Versla de trainer voor een boot." : "Rots in de weg!", 70);
+      if (tile === "tree" || tile === "rock" || tile === "water") {
+        this.showMessage(
+          tile === "tree"
+            ? "Boom in de weg!"
+            : tile === "water"
+              ? "Je kunt niet op water lopen. Gebruik F op een brug om te vissen."
+              : "Rots in de weg!",
+          80
+        );
         return;
       }
 
@@ -1349,6 +1421,54 @@ class Game {
     this.battleForcedSwitch = false;
     this.state = "BATTLE";
     this.showMessage("Trainer Luca challenges you!", 140);
+  }
+
+  startFishingEncounter() {
+    const active = this.player.getActivePokemon();
+    if (!active) return;
+
+    const fishPool = BIOME_POKEMON.BEACH.filter((name) => {
+      if (this.pokemonWithSprites.size && !this.pokemonWithSprites.has(name)) return false;
+      return true;
+    });
+
+    const pool = fishPool.length ? fishPool : BIOME_POKEMON.BEACH;
+    const fishName = pool[randInt(0, pool.length - 1)];
+    const minPokemonLevel = this.getMinimumPokemonLevel(fishName);
+    const minLevel = Math.max(minPokemonLevel, active.level - 4);
+    const maxLevel = Math.max(minLevel, Math.min(active.level + 4, 50));
+    const level = randInt(minLevel, maxLevel);
+
+    this.wild_pokemon = new Pokemon(fishName, level, this.spriteCache);
+    this.inTrainerBattle = false;
+    this.battleSwitchMode = false;
+    this.battleForcedSwitch = false;
+    this.state = "BATTLE";
+    this.showMessage(`A wild ${fishName} bit the hook!`, 140);
+  }
+
+  tryFishing() {
+    if (this.currentBiome !== "BEACH") {
+      this.showMessage("Hier kun je niet vissen.", 90);
+      return;
+    }
+
+    if (!this.hasFishingRod) {
+      this.showMessage("Je hebt nog geen vishengel. Versla de strandtrainer!", 120);
+      return;
+    }
+
+    const tile = this.terrain[this.player.y]?.[this.player.x];
+    if (tile !== "pier") {
+      this.showMessage("Ga op een brug staan om te vissen.", 90);
+      return;
+    }
+
+    if (Math.random() < 0.7) {
+      this.startFishingEncounter();
+    } else {
+      this.showMessage("Geen beet... Probeer opnieuw.", 100);
+    }
   }
 
   getActivePokemonIndex() {
@@ -1528,9 +1648,9 @@ class Game {
 
       if (this.inTrainerBattle) {
         this.beachTrainerDefeated = true;
-        if (!this.hasBoat) {
-          this.hasBoat = true;
-          this.showMessage("You won! Trainer Luca gave you a boat.", 180);
+        if (!this.hasFishingRod) {
+          this.hasFishingRod = true;
+          this.showMessage("You won! Trainer Luca gave you a Fishing Rod. Press F on a pier to fish!", 220);
           await sleep(1400);
         } else {
           this.showMessage("You defeated Trainer Luca!", 140);
@@ -1802,6 +1922,8 @@ class Game {
           this.saveGame();
         } else if (event.key.toLowerCase() === "l") {
           this.loadGame();
+        } else if (event.key.toLowerCase() === "f") {
+          this.tryFishing();
         } else if (event.key === "Tab") {
           this.prev_state = this.state;
           this.state = "INVENTORY";
