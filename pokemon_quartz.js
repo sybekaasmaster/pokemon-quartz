@@ -523,6 +523,7 @@ class Game {
       "pokemon bdsp character bridge.png",
       "pokemon bsdp character bridge.png",
       "pokemon trainer beach.jpg",
+      "pokemon trainer beach.png",
       "pokemon trainer grass.png",
       "pokemon trainer desert.png",
       "pokemon trainer snow.png",
@@ -565,18 +566,21 @@ class Game {
   getTrainerSprite(biome = this.currentBiome) {
     if (biome === "GRASSLAND") {
       return this.spriteCache["pokemon trainer grass.png"]
+        || this.spriteCache["pokemon trainer beach.png"]
         || this.spriteCache["pokemon trainer beach.jpg"]
         || this.spriteCache["pokemon bsdp character grass.png"]
         || null;
     }
     if (biome === "DESERT") {
       return this.spriteCache["pokemon trainer desert.png"]
+        || this.spriteCache["pokemon trainer beach.png"]
         || this.spriteCache["pokemon trainer beach.jpg"]
         || this.spriteCache["pokemon bsdp character desert.png"]
         || null;
     }
     if (biome === "SNOW") {
       return this.spriteCache["pokemon trainer snow.png"]
+        || this.spriteCache["pokemon trainer beach.png"]
         || this.spriteCache["pokemon trainer beach.jpg"]
         || this.spriteCache["pokemon bsdp character snow.png"]
         || null;
@@ -584,10 +588,12 @@ class Game {
     if (biome === "CLOUDS") {
       return this.spriteCache["champion.png"]
         || this.spriteCache["pokemon trainer snow.png"]
+        || this.spriteCache["pokemon trainer beach.png"]
         || this.spriteCache["pokemon trainer beach.jpg"]
         || null;
     }
-    return this.spriteCache["pokemon trainer beach.jpg"]
+    return this.spriteCache["pokemon trainer beach.png"]
+      || this.spriteCache["pokemon trainer beach.jpg"]
       || this.spriteCache["pokemon bsdp character beach.png"]
       || this.spriteCache["pokemon bsdp character.png"]
       || null;
@@ -1266,6 +1272,17 @@ class Game {
   drawBattle() {
     this.drawRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, COLORS.WHITE);
     this.drawRect(0, 300, SCREEN_WIDTH, 300, COLORS.GREEN);
+
+    if (this.inTrainerBattle) {
+      const trainerBiome = this.trainerBattle?.biome || this.currentBiome;
+      const trainerSprite = this.getTrainerSprite(trainerBiome);
+      if (trainerSprite) {
+        this.ctx.drawImage(trainerSprite, 620, 65, 110, 110);
+      }
+      if (this.trainerBattle?.name) {
+        this.drawText(this.trainerBattle.name, 675, 195, COLORS.BLACK, 18, "center");
+      }
+    }
 
     if (this.wild_pokemon) {
       const sprite = this.wild_pokemon.getSprite();
