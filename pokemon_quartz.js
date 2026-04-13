@@ -439,6 +439,7 @@ class Game {
     this.inventory_selected = 0;
     this.inventory_tab = 0;
     this.inventory_loadsave_selected = 0;
+    this.lastSaveStatus = "No save yet";
     this.inputLocked = false;
     this.captureHideWild = false;
     this.captureWildScale = 1;
@@ -591,12 +592,14 @@ class Game {
       legendariesEncountered: Array.from(this.legendariesEncountered)
     };
     localStorage.setItem("pokemonSave", JSON.stringify(saveData));
+    this.lastSaveStatus = `Saved (${new Date().toLocaleTimeString()})`;
     this.showMessage("Game saved!", 120);
   }
 
   loadGame() {
     const saveData = localStorage.getItem("pokemonSave");
     if (!saveData) {
+      this.lastSaveStatus = "Load failed (no save found)";
       this.showMessage("No save found!", 120);
       return false;
     }
@@ -642,10 +645,12 @@ class Game {
 
       this.terrain = this.biomeMap[this.currentBiome];
       this.state = "EXPLORE";
+      this.lastSaveStatus = `Loaded (${new Date().toLocaleTimeString()})`;
       this.showMessage("Game loaded!", 120);
       return true;
     } catch (e) {
       console.error("Error loading save:", e);
+      this.lastSaveStatus = "Load failed (invalid save data)";
       this.showMessage("Error loading save!", 120);
       return false;
     }
@@ -1407,6 +1412,9 @@ class Game {
         this.drawText(opts[i], 400, 242 + i * 70, COLORS.BLACK, 28, "center");
       }
       this.drawText("UP/DOWN + ENTER", 400, 360, COLORS.BLACK, 20, "center");
+      const hasSave = Boolean(localStorage.getItem("pokemonSave"));
+      this.drawText(`Save slot: ${hasSave ? "Available" : "Empty"}`, 400, 390, COLORS.BLACK, 18, "center");
+      this.drawText(this.lastSaveStatus, 400, 415, COLORS.BLACK, 18, "center");
     }
 
     this.drawText("LEFT/RIGHT - Tabs | ESC/Q - Exit", 50, SCREEN_HEIGHT - 35, COLORS.WHITE, 20);
